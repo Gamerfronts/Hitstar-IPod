@@ -191,6 +191,47 @@ body{background:radial-gradient(1100px 700px at 50% 28%,#1d2433,#080a0e 72%);dis
 .spl-c{font-size:1.15em;min-width:1.1em;text-align:center}
 .spl-c.cur{font-size:1.9em;font-weight:800;color:var(--hlfg);background:linear-gradient(var(--hl1),var(--hl2));border-radius:.35em;padding:.05em .3em}
 .spl-h{font-size:.72em;color:var(--dim);text-align:center}
+/* ───────── Hitzstar Store ───────── */
+.st{position:absolute;inset:0;overflow:hidden;background:var(--bg)}
+.sb{position:relative;height:7.8em;background:linear-gradient(135deg,var(--hl2),#0b0d12) center/cover}
+.sb-sh{position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,.74))}
+.sb-c{position:absolute;left:.85em;right:.85em;bottom:.55em;color:#fff}
+.sb-logo{display:block;max-height:3.4em;max-width:72%;object-fit:contain;filter:drop-shadow(0 .1em .35em rgba(0,0,0,.75))}
+.sb-name{font-size:1.7em;font-weight:800;line-height:1.05;text-shadow:0 .08em .4em rgba(0,0,0,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-sub{font-size:.72em;letter-spacing:.14em;text-transform:uppercase;opacity:.88;margin-top:.25em}
+.sh{font-weight:800;font-size:1.02em;padding:.75em .85em .3em}
+.sh::after{content:" ›";opacity:.5}
+.sa{display:flex;gap:.5em;padding:.55em .85em .2em}
+.sbtn{flex:1;text-align:center;padding:.5em .2em;border-radius:.55em;background:var(--sep);font-weight:700;font-size:.88em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sbtn.foc{background:linear-gradient(var(--hl1),var(--hl2));color:var(--hlfg)}
+.shelf{display:flex;gap:.6em;padding:.15em .85em .5em;overflow:hidden}
+.tile{flex:0 0 6.5em;min-width:0}
+.tc{width:6.5em;height:6.5em;border-radius:.45em;background:var(--sep) center/cover;box-shadow:0 .15em .5em rgba(0,0,0,.28);transition:transform .15s}
+.tc.round{border-radius:50%}
+.tl{font-size:.8em;margin-top:.35em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tsub{font-size:.68em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.foc .tc{outline:.2em solid var(--hl1);outline-offset:.12em;transform:scale(1.04)}
+.tile.foc .tl{font-weight:700}
+.tile.sk .tc{background:linear-gradient(90deg,var(--sep),var(--pv),var(--sep));background-size:200%;animation:shm 1.2s linear infinite}
+.ss{display:flex;align-items:center;gap:.6em;padding:.38em .85em;border-bottom:1px solid var(--sep)}
+.ss-n{flex:0 0 1.5em;text-align:center;color:var(--dim);font-weight:700;font-size:.95em}
+.ss.r1 .ss-n{color:var(--hl2)}
+.ss-t{flex:1;min-width:0}
+.ss-a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92em}
+.ss-s{font-size:.72em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-d{font-size:.8em;color:var(--dim);white-space:nowrap}
+.ss.more .ss-a{color:var(--hl2);font-weight:700}
+.ss.foc{background:linear-gradient(var(--hl1),var(--hl2));color:var(--hlfg)}
+.ss.foc .ss-n,.ss.foc .ss-s,.ss.foc .ss-d,.ss.foc .ss-a{color:var(--hlfg)}
+.sl{height:.9em;margin:.45em .85em;border-radius:.4em;background:linear-gradient(90deg,var(--sep),var(--pv),var(--sep));background-size:200%;animation:shm 1.2s linear infinite}
+.sl.s2{width:60%}
+@keyframes shm{to{background-position:-200% 0}}
+.ah{display:flex;gap:.85em;padding:.85em;align-items:center;background:linear-gradient(var(--pv),var(--bg))}
+.ah-art{flex:0 0 7em;height:7em;border-radius:.45em;background:linear-gradient(135deg,var(--hl2),#111) center/cover;box-shadow:0 .3em 1em rgba(0,0,0,.35)}
+.ah-m{flex:1;min-width:0}
+.ah-t{font-weight:800;font-size:1.1em;line-height:1.15;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ah-a{color:var(--hl2);font-weight:700;font-size:.9em;margin-top:.2em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ah-i{color:var(--dim);font-size:.75em;margin-top:.25em}
 #yt-shell{position:fixed;top:-3000px;left:-3000px;width:320px;height:180px;opacity:0;pointer-events:none;overflow:hidden;z-index:1}
 #yt-shell iframe{width:100%;height:100%;border:0;display:block}
 #hint{position:fixed;right:22px;bottom:18px;max-width:250px;color:#7e8798;font-size:12px;line-height:1.55}
@@ -393,7 +434,7 @@ function creditsOf(credits,fallbackId,fallbackName){
 function trackFromRec(rec){
   const cr=creditsOf(rec['artist-credit']);
   const rg=rec.releases&&rec.releases[0]&&rec.releases[0]['release-group'];
-  return {title:rec.title,artist:cr.artist,artistId:cr.artistId,features:cr.features,
+  return {title:rec.title,artist:cr.artist,artistId:cr.artistId,features:cr.features,_pop:(rec.releases||[]).length,
     albumArt:rg&&rg.id?'https://coverartarchive.org/release-group/'+rg.id+'/front':null,
     albumId:rg&&rg.id||null,album:(rg&&rg.title)||(rec.releases&&rec.releases[0]&&rec.releases[0].title)||'',
     albumType:(rg&&rg['primary-type'])||'Album',youtubeId:null,duration:rec.length?rec.length/1000:0};
@@ -597,6 +638,7 @@ function render(dir){
   else if(s.type==='text'){vp.innerHTML='<div class="txt" id="txt"></div>';$('#txt').textContent=s.text||''}
   else if(s.type==='loading') vp.innerHTML='<div class="ld"><div class="spin"></div><div>'+esc(s.msg||'Loading…')+'</div></div>';
   else if(s.type==='search') renderSearch(s,vp);
+  else if(s.type==='store') renderStore(s,vp);
   else if(s.type==='spell') renderSpell(s,vp);
   else if(s.type==='clock') renderClock(s,vp);
   else if(s.type==='stopwatch') renderStopwatch(s,vp);
@@ -741,6 +783,7 @@ function wheelStep(d){
   else if(s.type==='spell'){s.ci=(s.ci+d+CHARS.length)%CHARS.length;tick();renderSpell(s,$('#viewport'))}
   else if(s.type==='calendar'){s.m+=d;tick();renderCalendar(s,$('#viewport'))}
   else if(s.type==='brick'){brickMove(s,d)}
+  else if(s.type==='store'){storeStep(s,d)}
 }
 function selectItem(){
   const s=scr(); if(!s) return;
@@ -757,6 +800,7 @@ function selectItem(){
   else if(s.type==='stopwatch'){swToggle(s)}
   else if(s.type==='calendar'){s.m=0;renderCalendar(s,$('#viewport'))}
   else if(s.type==='brick'){brickToggle(s)}
+  else if(s.type==='store'){storeSelect(s)}
 }
 const btnMenu=()=>{tick();back()};
 const btnPlay=()=>{tick();if(scr().type==='brick'){brickToggle(scr());return}togglePlay()};
@@ -810,7 +854,7 @@ document.addEventListener('keydown',e=>{
   if(inp){if(e.key==='Enter'){e.preventDefault();submitSearch()}else if(e.key==='Escape'){document.activeElement.blur();back()}return}
   if(e.key==='h'||e.key==='H'){setLock(!locked);return}
   if(locked){flashHold();return}
-  const s=scr(), stepKeys=s&&['flow','brick','spell','calendar'].includes(s.type);
+  const s=scr(), stepKeys=s&&['flow','brick','spell','calendar','store'].includes(s.type);
   switch(e.key){
     case 'ArrowDown': e.preventDefault();wheelStep(1);break;
     case 'ArrowUp': e.preventDefault();wheelStep(-1);break;
@@ -828,6 +872,7 @@ document.addEventListener('keydown',e=>{
 function ctxTarget(){
   const s=scr(); if(!s) return nowT;
   if(s.type==='list'){const it=s._items&&s._items[s.sel];if(it&&it.track)return it.track}
+  if(s.type==='store'){const f=s._flat&&s._flat[s.fi];const it=f&&s.blocks[f.b].items[f.i];if(it&&it.track)return it.track}
   return nowT;
 }
 function cycleSleep(){const o=[0,15,30,45,60,'end'];const cur=sleepLabel==='Off'?0:sleepLabel==='End of Track'?'end':parseInt(sleepLabel);setSleep(o[(o.indexOf(cur)+1)%o.length])}
@@ -900,6 +945,7 @@ function mainMenu(){
   return listScreen('Hitzstar',()=>[
     nowT&&{label:'Now Playing',chev:1,art:MIXART,onSelect:gotoNow},
     {label:'Music',chev:1,art:MIXART,onSelect:()=>push(musicMenu())},
+    {label:'Hitzstar Store',chev:1,art:MIXART,onSelect:openStore},
     {label:'Discover',chev:1,art:MIXART,onSelect:()=>push(discoverMenu())},
     {label:'Search',chev:1,art:MIXART,onSelect:()=>push(searchMenu())},
     {label:'Favorites',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Favorites',getFavs(),{empty:'No favorites yet'}))},
@@ -1049,7 +1095,7 @@ function albumsFromGroups(groups){
 }
 
 /* ═════════ artists, albums, editions ═════════ */
-function openArtist(a){
+function openArtistList(a){
   const photo=()=>artistPhoto(a);
   push(listScreen(a.name,[
     {label:'This Is '+a.name,art:photo,chev:1,onSelect:()=>openMix('This Is '+a.name,()=>artistMix(a,'top'))},
@@ -1107,7 +1153,7 @@ function albumsScreen(a,list,title,isEd){
   return listScreen(title,list.map(g=>({label:g.title,sub:(g['primary-type']||'Album')+(g['first-release-date']?' · '+g['first-release-date'].slice(0,4):''),
     art:()=>albumArt(g.id,a.id,g._releaseId||null,!!g._releaseId),chev:1,onSelect:()=>openAlbum(a,g,g._releaseId||null)})),{preview:true,rowH:'two'});
 }
-function openAlbum(artist,rg,releaseId){
+function openAlbumList(artist,rg,releaseId){
   openAsync(rg.title||'Album',async()=>{
     const [art,rel]=await Promise.all([
       albumArt(rg.id,artist.id,releaseId||null,!!releaseId).catch(()=>null),
@@ -1381,6 +1427,272 @@ function quizNext(qs,lib,artists){
   }}));
   queue=[{...t}]; failCount=0; playTrack(0);
   if(scr()===qs) render();
+}
+
+/* ═════════ Hitzstar Store (iTunes-style home, artist and album pages) ═════════ */
+// Featured pool. Three have verified MusicBrainz IDs; the rest are resolved by exact name at runtime.
+const STORE_KNOWN=[
+  {name:'Drake',id:'9fff2f8a-21e6-47de-a2b8-7f449929d43f'},
+  {name:'Rihanna',id:'73e5e69d-3554-40d8-8516-00cb38737a1c'},
+  {name:'One Direction',id:'1a425bbd-cca4-4b2c-aeb7-71cb176c828a'}];
+const STORE_NAMES=['Taylor Swift','The Weeknd','Beyoncé','Ed Sheeran','Billie Eilish','Kendrick Lamar','Adele','Bruno Mars','Dua Lipa','Post Malone','SZA','Harry Styles','Olivia Rodrigo','Coldplay','Eminem','Lady Gaga','Ariana Grande','Justin Bieber','Usher','Jay-Z','Kanye West','Nicki Minaj','Miley Cyrus','Katy Perry','Shakira','Imagine Dragons','Maroon 5','Doja Cat','Travis Scott','Sabrina Carpenter'];
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+async function resolveArtist(name){
+  const m=jget('ipod_store_ids',{}); if(m[name]) return {id:m[name],name};
+  const d=await mb('artist/?query='+enc('artist:"'+name+'"')+'&limit=6&fmt=json').catch(()=>null);
+  const t=norm(name);
+  const hit=((d&&d.artists)||[]).filter(a=>norm(a.name)===t).sort((a,b)=>(b.score||0)-(a.score||0)||((a.disambiguation?1:0)-(b.disambiguation?1:0)))[0];
+  if(!hit) return null;
+  m[name]=hit.id; jset('ipod_store_ids',m); return {id:hit.id,name:hit.name};
+}
+const brandMem=new Map();
+function storeBrand(a){
+  if(!brandMem.has(a.id)) brandMem.set(a.id,(async()=>{
+    const ov=parseArtistOv(a.id); let banner=ov?ov.bg:null, photo=ov?ov.thumb:null, logo=null;
+    const f0=x=>x&&x[0]&&x[0].url||null;
+    try{
+      const fd=await fanart(a.id);
+      logo=f0(fd.hdmusiclogo)||f0(fd.musiclogo)||f0(fd.hdclearlogo)||f0(fd.artistlogo);
+      if(!banner) banner=f0(fd.artistbackground)||f0(fd.musicbanner);
+      if(!photo) photo=f0(fd.artistthumb);
+    }catch{}
+    if(!banner||!logo||!photo){try{const ad=await audiodb(a.id);banner=banner||ad.strArtistFanart||ad.strArtistBanner||null;logo=logo||ad.strArtistLogo||null;photo=photo||ad.strArtistThumb||null}catch{}}
+    return {banner,logo,photo};
+  })());
+  return brandMem.get(a.id);
+}
+const coverMem=new Map();
+function storeCover(rgId,artistId,releaseId){
+  const k=rgId+'|'+(releaseId||'');
+  if(!coverMem.has(k)) coverMem.set(k,(async()=>{
+    const ov=getArtOv(rgId); if(ov) return ov;
+    if(releaseId){const u='https://coverartarchive.org/release/'+releaseId+'/front';if(await imgOk(u)) return u}
+    const u='https://coverartarchive.org/release-group/'+rgId+'/front'; if(await imgOk(u)) return u;
+    return albumArt(rgId,artistId,releaseId||null,!!releaseId);
+  })());
+  return coverMem.get(k);
+}
+const byDateDesc=(x,y)=>(y['first-release-date']||'').localeCompare(x['first-release-date']||'');
+async function storeInfo(a){
+  const ck='ipod_store_info:'+a.id, c=artGet(ck); if(c!==undefined) return c;
+  const [rgd,rec]=await Promise.all([
+    mb('release-group/?artist='+a.id+'&limit=40&fmt=json').catch(()=>null),
+    mb('recording/?query='+enc('arid:"'+a.id+'"')+'&limit=60&fmt=json').catch(()=>null)]);
+  if(!rgd&&!rec) return null;
+  const albums=((rgd&&rgd['release-groups'])||[]).filter(g=>g['primary-type']==='Album'&&!(g['secondary-types']||[]).length&&!ED_RE.test(g.title)).sort(byDateDesc);
+  const l=albums[0];
+  const info={latest:l?{id:l.id,title:l.title,date:l['first-release-date']||''}:null,tops:rankRec(((rec&&rec.recordings)||[]).filter(r=>r.title)).slice(0,3).map(trackFromRec)};
+  artSet(ck,info); return info;
+}
+const topMem=new Map();
+function topSongsC(a){if(!topMem.has(a.id))topMem.set(a.id,topSongs(a).catch(e=>{topMem.delete(a.id);throw e}));return topMem.get(a.id)}
+function splitDisco(list){
+  const o={albums:[],eps:[],singles:[],more:[]};
+  list.forEach(g=>{const t=g['primary-type'],sec=g['secondary-types']||[];
+    if(t==='Single')o.singles.push(g);else if(t==='EP')o.eps.push(g);else if(t==='Album'&&!sec.length)o.albums.push(g);else o.more.push(g)});
+  return o;
+}
+function playTop(a,sh){
+  toast('Loading songs…');
+  topSongsC(a).then(tr=>{if(!tr.length){toast('No songs found');return}shuffleOn=!!sh;updateSb();playFrom(sh?shuffleArr(tr):tr,0)}).catch(()=>toast('Could not load songs'));
+}
+function addAllToPlaylist(name,tracks){
+  const p=getPls(); p[name]=p[name]||[];
+  tracks.forEach(t=>{if(!p[name].some(x=>sameT(x,t)))p[name].push(slim(t))});
+  jset('playlists',p); toast('Added "'+name+'" to your library');
+}
+
+/* —— store screen renderer: stacked blocks (banner / actions / songs / shelf / rows), one linear focus —— */
+function blockHtml(b,bi){
+  const hdr=b.title&&b.kind!=='banner'&&b.kind!=='albumhead'?'<div class="sh">'+esc(b.title)+'</div>':'';
+  if(b.kind==='banner')
+    return '<div class="sb"'+(b.img?' data-bg="'+esc(b.img)+'"':'')+'><div class="sb-sh"></div><div class="sb-c">'+
+      (b.logo?'<img class="sb-logo" src="'+esc(b.logo)+'" alt="" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'"><div class="sb-name" style="display:none">'+esc(b.title)+'</div>':'<div class="sb-name">'+esc(b.title)+'</div>')+
+      (b.sub?'<div class="sb-sub">'+esc(b.sub)+'</div>':'')+'</div></div>';
+  if(b.kind==='actions')
+    return '<div class="sa">'+b.items.map((it,i)=>'<div class="sbtn" data-f="'+bi+':'+i+'">'+esc(it.label)+'</div>').join('')+'</div>';
+  if(b.kind==='songs'){
+    const rows=b.items.map((it,i)=>it.more
+      ?'<div class="ss more" data-f="'+bi+':'+i+'"><div class="ss-t"><div class="ss-a">'+esc(it.label)+'</div></div></div>'
+      :'<div class="ss'+(it.rank===1?' r1':'')+'" data-f="'+bi+':'+i+'"><span class="ss-n">'+esc(it.rank)+'</span><div class="ss-t"><div class="ss-a">'+esc(it.title)+'</div>'+(it.sub?'<div class="ss-s">'+esc(it.sub)+'</div>':'')+'</div>'+(it.dur?'<span class="ss-d">'+esc(it.dur)+'</span>':'')+'</div>').join('');
+    return '<div>'+hdr+(b.loading&&!b.items.length?'<div class="sl"></div><div class="sl s2"></div>':'')+rows+'</div>';
+  }
+  if(b.kind==='shelf'){
+    const tiles=b.items.map((it,i)=>'<div class="tile" data-f="'+bi+':'+i+'"><div class="tc'+((b.round||it.round)?' round':'')+'"'+(it.bg?' style="background-image:'+it.bg+'"':'')+(it.art?' data-art="'+bi+':'+i+'"':'')+'></div><div class="tl">'+esc(it.label)+'</div>'+(it.sub?'<div class="tsub">'+esc(it.sub)+'</div>':'')+'</div>').join('');
+    return '<div>'+hdr+'<div class="shelf">'+tiles+(b.loading?'<div class="tile sk"><div class="tc"></div></div>':'')+'</div></div>';
+  }
+  if(b.kind==='rows')
+    return '<div>'+hdr+b.items.map((it,i)=>'<div class="ss" data-f="'+bi+':'+i+'"><div class="ss-t"><div class="ss-a">'+esc(it.label)+'</div>'+(it.sub?'<div class="ss-s">'+esc(it.sub)+'</div>':'')+'</div>'+(it.chev?'<span class="ss-d">›</span>':'')+'</div>').join('')+'</div>';
+  if(b.kind==='albumhead')
+    return '<div class="ah"><div class="ah-art"'+(b.art?' data-bg="'+esc(b.art)+'"':'')+'></div><div class="ah-m"><div class="ah-t">'+esc(b.title)+'</div><div class="ah-a">'+esc(b.artist||'')+'</div><div class="ah-i">'+esc(b.meta||'')+'</div></div></div>';
+  if(b.kind==='loading') return '<div>'+hdr+'<div class="sl"></div><div class="sl s2"></div></div>';
+  return '<div></div>';
+}
+function renderStore(s,vp,refresh){
+  const old=$('#st'), keepTop=old?old.scrollTop:0;
+  const prev=s._flat&&s._flat[s.fi], pk=prev&&s.blocks[prev.b]?(s.blocks[prev.b].key+':'+prev.i):null;
+  vp.innerHTML='<div class="st" id="st"><div class="st-in" id="st-in">'+s.blocks.map((b,bi)=>blockHtml(b,bi)).join('')+'</div></div>';
+  const els=$$('#st [data-f]'); s._els=els;
+  s._flat=els.map(e=>{const p=e.dataset.f.split(':');return {b:+p[0],i:+p[1]}});
+  if(pk){const k=s._flat.findIndex(f=>s.blocks[f.b].key+':'+f.i===pk);if(k>=0)s.fi=k}
+  s.fi=clamp(s.fi||0,0,Math.max(0,els.length-1));
+  $$('#st [data-bg]').forEach(e=>{e.style.backgroundImage='url("'+e.dataset.bg+'")'});
+  $$('#st [data-art]').forEach(e=>{
+    const p=e.dataset.art.split(':'), it=s.blocks[+p[0]]&&s.blocks[+p[0]].items[+p[1]]; if(!it) return;
+    const set=u=>{if(u)e.style.backgroundImage='url("'+u+'")'};
+    if(it._u) set(it._u);
+    else if(it.art){const key=e.dataset.art;Promise.resolve(it.art()).then(u=>{it._u=u;const el=$('#st [data-art="'+key+'"]');if(el)set(u)}).catch(()=>{})}
+  });
+  const st=$('#st'); if(refresh&&st) st.scrollTop=keepTop;
+  applyStoreFocus(s,!!refresh);
+}
+function refreshStore(s){if(scr()===s) renderStore(s,$('#viewport'),true)}
+function applyStoreFocus(s,noScroll){
+  const els=s._els; if(!els||!els.length) return;
+  els.forEach((e,i)=>e.classList.toggle('foc',i===s.fi));
+  if(noScroll) return;
+  const el=els[s.fi], f=s._flat[s.fi], cont=$('#st'); if(!cont||!el) return;
+  const cr=cont.getBoundingClientRect();
+  const first=s.fi===0||s._flat[s.fi-1].b!==f.b;
+  if(s.fi===0) cont.scrollTop=0;
+  else if(first){const blk=$('#st-in').children[f.b];if(blk)cont.scrollTop+=blk.getBoundingClientRect().top-cr.top-3}
+  else{const er=el.getBoundingClientRect();if(er.top<cr.top+3)cont.scrollTop-=cr.top+3-er.top;else if(er.bottom>cr.bottom-3)cont.scrollTop+=er.bottom-(cr.bottom-3)}
+  const sh=el.closest&&el.closest('.shelf');
+  if(sh){const sr=sh.getBoundingClientRect(),er=el.getBoundingClientRect();if(er.left<sr.left+6)sh.scrollLeft-=sr.left+6-er.left;else if(er.right>sr.right-6)sh.scrollLeft+=er.right-(sr.right-6)}
+}
+function storeStep(s,d){const n=s._els?s._els.length:0;if(!n)return;const ns=clamp(s.fi+d,0,n-1);if(ns!==s.fi){s.fi=ns;tick();applyStoreFocus(s)}}
+function storeSelect(s){const f=s._flat&&s._flat[s.fi];if(!f)return;const it=s.blocks[f.b].items[f.i];if(it&&it.onSelect){tick();it.onSelect(it)}}
+
+/* —— Store home —— */
+const gradOf=(a,b)=>'linear-gradient(135deg,'+a+','+b+')';
+function openStore(){
+  const s={type:'store',title:'Hitzstar Store',fi:0,blocks:[
+    {key:'hero',kind:'banner',title:'Hitzstar Store',sub:'Featured'},
+    {key:'act',kind:'actions',items:[{label:'🔍 Search',onSelect:()=>push(searchMenu())},{label:'♪ Top Songs',onSelect:()=>openMix(TOP10.label,top10)}]},
+    {key:'browse',kind:'shelf',title:'Browse',items:[
+      {label:'Search',sub:'Find music',bg:gradOf('#5ea3f2','#1a62c9'),onSelect:()=>push(searchMenu())},
+      {label:'Top Songs',sub:'Hitzstar Top 10',bg:grad(TOP10),onSelect:()=>openMix(TOP10.label,top10)},
+      {label:'Genres',sub:'10 mixes',bg:gradOf('#ff6ec4','#7873f5'),onSelect:()=>push(mixList('Genres',GENRES))},
+      {label:'Decades',sub:'80s – 2020s',bg:gradOf('#f2994a','#f2c94c'),onSelect:()=>push(mixList('Decades',DECADES))},
+      {label:'Moods',sub:'Chill to party',bg:gradOf('#43cea2','#185a9d'),onSelect:()=>push(mixList('Moods',MOODS))},
+      {label:'My Library',sub:'Your music',bg:gradOf('#555','#111'),onSelect:()=>push(musicMenu())}]},
+    {key:'new',kind:'shelf',title:'New & Noteworthy',items:[],loading:true},
+    {key:'top',kind:'songs',title:'Top Songs',items:[],loading:true,_all:[]},
+    {key:'pl',kind:'shelf',title:'Hot Playlists',items:[
+      {label:TOP10.label,sub:'Hitzstar Mix',bg:grad(TOP10),onSelect:()=>openMix(TOP10.label,top10)},
+      ...MOODS.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onSelect:()=>openMix(m.label,()=>tagMix(m))})),
+      ...DECADES.slice(0,3).map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))]},
+    {key:'like',kind:'shelf',title:'You Might Like',round:true,items:[],loading:true},
+    {key:'genres',kind:'shelf',title:'Genres',items:GENRES.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))}
+  ]};
+  push(s); storeFill(s);
+}
+async function storeFill(s){
+  const alive=()=>stack.includes(s), upd=()=>{if(alive())refreshStore(s)}, blk=k=>s.blocks.find(b=>b.key===k);
+  const lib=libArtists().filter(a=>a.id);
+  const feat=shuffleArr([...STORE_KNOWN,...lib.slice(0,3)])[0];
+  storeBrand(feat).then(b=>{
+    if(!alive()) return;
+    const h=blk('hero'); h.img=b.banner; h.logo=b.logo; h.title=feat.name; h.sub='Featured Artist';
+    blk('act').items=[{label:'View Artist',onSelect:()=>openArtist(feat)},{label:'▶ Play',onSelect:()=>playTop(feat)},{label:'🔍',onSelect:()=>push(searchMenu())}];
+    upd();
+  });
+  if(lib.length){
+    s.blocks.splice(s.blocks.findIndex(b=>b.key==='genres'),0,{key:'lib',kind:'shelf',round:true,title:'From Your Library',items:lib.slice(0,8).map(a=>({label:a.name,art:()=>artistPhoto(a),onSelect:()=>openArtist(a)}))});
+    upd();
+  }
+  const srcs=[...shuffleArr(STORE_KNOWN),...shuffleArr(STORE_NAMES).slice(0,9).map(n=>({name:n}))];
+  for(const src of srcs){
+    if(!alive()) return;
+    try{
+      const a=src.id?src:await resolveArtist(src.name); if(!a||!alive()) continue;
+      const info=await storeInfo(a); if(!info||!alive()) continue;
+      const nb=blk('new'), tb=blk('top'), lb=blk('like');
+      if(info.latest){
+        const L=info.latest;
+        nb.items.push({label:L.title,sub:a.name+(L.date?' · '+L.date.slice(0,4):''),_d:L.date,art:()=>storeCover(L.id,a.id),onSelect:()=>openAlbum(a,{id:L.id,title:L.title,'primary-type':'Album','first-release-date':L.date})});
+        nb.items.sort((x,y)=>(y._d||'').localeCompare(x._d||''));
+      }
+      lb.items.push({label:a.name,art:()=>artistPhoto(a),onSelect:()=>openArtist(a)});
+      (info.tops||[]).slice(0,2).forEach(t=>tb._all.push(t));
+      tb._all.sort((x,y)=>(y._pop||0)-(x._pop||0));
+      const top8=tb._all.slice(0,8);
+      tb.items=top8.map((t,i)=>({rank:i+1,title:t.title,sub:artistLine(t),track:t,onSelect:()=>playFrom(top8,i)}));
+      tb.items.push({more:true,label:'See all '+Math.min(25,tb._all.length)+' songs ›',onSelect:()=>push(tracksScreen('Top Songs',tb._all.slice(0,25)))});
+      upd();
+    }catch(e){console.warn(e)}
+    await sleep(150);
+  }
+  ['new','top','like'].forEach(k=>{blk(k).loading=false}); upd();
+}
+
+/* —— Store artist page —— */
+function openArtist(a){
+  const s={type:'store',title:a.name,fi:0,blocks:[
+    {key:'hero',kind:'banner',title:a.name,sub:'Artist'},
+    {key:'act',kind:'actions',items:[{label:'▶ Play',onSelect:()=>playTop(a)},{label:'⤮ Shuffle',onSelect:()=>playTop(a,true)}]},
+    {key:'songs',kind:'songs',title:'Top Songs',items:[],loading:true},
+    {key:'more',kind:'rows',title:'More',items:[
+      {label:'This Is '+a.name,sub:'Hitzstar Mix',chev:1,onSelect:()=>openMix('This Is '+a.name,()=>artistMix(a,'top'))},
+      {label:a.name+' Deep Cuts',sub:'Hitzstar Mix · lesser-known tracks',chev:1,onSelect:()=>openMix(a.name+' Deep Cuts',()=>artistMix(a,'deep'))},
+      {label:'About',sub:'Biography',chev:1,onSelect:()=>openAsync('About',async()=>textScreen(a.name,await artistBio(a)||'No biography available.'),'Loading bio…')}]}
+  ]};
+  push(s);
+  const alive=()=>stack.includes(s), upd=()=>{if(alive())refreshStore(s)}, blk=k=>s.blocks.find(b=>b.key===k);
+  storeBrand(a).then(b=>{const h=blk('hero');h.img=b.banner;h.logo=b.logo;upd()});
+  topSongsC(a).then(tr=>{
+    const sb=blk('songs'); sb.loading=false;
+    sb.items=tr.slice(0,10).map((t,i)=>({rank:i+1,title:t.title,sub:t.album||'',dur:t.duration?fmt(t.duration):'',track:t,onSelect:()=>playFrom(tr,i)}));
+    if(tr.length>10) sb.items.push({more:true,label:'See all '+tr.length+' songs ›',onSelect:()=>push(tracksScreen('Top Songs',tr))});
+    if(!tr.length) sb.items=[{more:true,label:'No songs found',onSelect:()=>{}}];
+    upd();
+  }).catch(()=>{const sb=blk('songs');sb.loading=false;sb.items=[{more:true,label:'Could not load songs',onSelect:()=>{}}];upd()});
+  discography(a).then(d=>{
+    const sp=splitDisco(d.albums);
+    const shelf=(key,title,list)=>list.length?{key,kind:'shelf',title,items:list.map(g=>({label:g.title,sub:(g['first-release-date']||'').slice(0,4)||g['primary-type']||'',art:()=>storeCover(g.id,a.id,g._releaseId||null),onSelect:()=>openAlbum(a,g,g._releaseId||null)}))}:null;
+    const extra=[shelf('d:albums','Albums',sp.albums),shelf('d:eps','EPs',sp.eps),shelf('d:singles','Singles',sp.singles),shelf('d:more','Live, Compilations & More',sp.more),shelf('d:ed','Deluxe & Special Editions',d.editions)].filter(Boolean);
+    const rest=s.blocks.filter(b=>!b.key.startsWith('d:')&&b.key!=='more');
+    s.blocks=[...rest,...extra,blk('more')||s.blocks[s.blocks.length-1]];
+    upd();
+  }).catch(()=>{});
+  return s;
+}
+
+/* —— Store album page —— */
+function openAlbum(artist,rg,releaseId){
+  const meta0=(rg['primary-type']||'Album')+(rg['first-release-date']?' · '+rg['first-release-date'].slice(0,4):'');
+  const s={type:'store',title:rg.title||'Album',fi:0,blocks:[
+    {key:'head',kind:'albumhead',title:rg.title||'Album',artist:artist.name,meta:meta0,art:null},
+    {key:'load',kind:'loading',title:'Tracks'}]};
+  push(s);
+  const alive=()=>stack.includes(s), upd=()=>{if(alive())refreshStore(s)};
+  (async()=>{
+    try{
+      const [art,rel]=await Promise.all([
+        albumArt(rg.id,artist.id,releaseId||null,!!releaseId).catch(()=>null),
+        releaseId?Promise.resolve({releases:[{id:releaseId}]}):mb('release/?release-group='+rg.id+'&limit=1&fmt=json')]);
+      s.blocks[0].art=art; upd();
+      if(!rel.releases||!rel.releases.length){s.blocks[1]={key:'load',kind:'rows',title:'Tracks',items:[{label:'No release data found'}]};upd();return}
+      const full=await mb('release/'+rel.releases[0].id+'?inc=recordings+artist-credits&fmt=json');
+      const tracks=[];
+      (full.media||[]).forEach(m=>(m.tracks||[]).forEach(tk=>{
+        const rec=tk.recording||{}, cr=creditsOf(rec['artist-credit'],artist.id,artist.name), len=tk.length||rec.length;
+        tracks.push({title:tk.title||rec.title,duration:len?len/1000:0,album:rg.title,albumId:rg.id,albumType:rg['primary-type']||'Album',artist:cr.artist,artistId:cr.artistId,albumArt:art,features:cr.features,youtubeId:null});
+      }));
+      if(!tracks.length){s.blocks[1]={key:'load',kind:'rows',title:'Tracks',items:[{label:'No tracks listed for this release'}]};upd();return}
+      const mins=Math.round(tracks.reduce((n,t)=>n+(t.duration||0),0)/60);
+      s.blocks[0].meta=meta0+' · '+tracks.length+' songs'+(mins?' · '+mins+' min':'');
+      s.blocks=[s.blocks[0],
+        {key:'act',kind:'actions',items:[
+          {label:'▶ Play',onSelect:()=>{shuffleOn=false;updateSb();playFrom(tracks,0)}},
+          {label:'⤮ Shuffle',onSelect:()=>{shuffleOn=true;updateSb();playFrom(tracks,Math.floor(Math.random()*tracks.length))}},
+          {label:'＋ Get',onSelect:()=>addAllToPlaylist(rg.title||'Album',tracks)}]},
+        {key:'songs',kind:'songs',title:'Tracks',items:tracks.map((t,i)=>({rank:i+1,title:t.title,sub:artistLine(t)!==artist.name?artistLine(t):'',dur:t.duration?fmt(t.duration):'',track:t,onSelect:()=>playFrom(tracks,i)}))},
+        {key:'more',kind:'rows',items:[{label:'More by '+artist.name,chev:1,onSelect:()=>openArtist(artist)}]}];
+      upd();
+    }catch(e){console.warn(e);s.blocks[1]={key:'load',kind:'rows',title:'Tracks',items:[{label:'Could not load this album'}]};upd()}
+  })();
+  return s;
 }
 
 /* ═════════ boot ═════════ */
