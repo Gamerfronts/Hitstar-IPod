@@ -232,6 +232,43 @@ body{background:radial-gradient(1100px 700px at 50% 28%,#1d2433,#080a0e 72%);dis
 .ah-t{font-weight:800;font-size:1.1em;line-height:1.15;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .ah-a{color:var(--hl2);font-weight:700;font-size:.9em;margin-top:.2em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ah-i{color:var(--dim);font-size:.75em;margin-top:.25em}
+/* ───────── Music Games ───────── */
+.qz{position:absolute;inset:0;display:flex;flex-direction:column}
+.qz-top{flex:1;min-height:0;padding:.5em .8em;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:.25em}
+.qz-t1{font-weight:800;font-size:1.02em}
+.qz-t2{font-size:.9em;color:var(--hl2);font-weight:700}
+.qz-t3{font-size:.7em;color:var(--dim)}
+.qz-bar{height:.35em;background:var(--sep);flex:0 0 auto}
+.qz-bar i{display:block;height:100%;width:0;background:linear-gradient(var(--hl1),var(--hl2))}
+.qz-opts{flex:0 0 auto}
+.qz-o{height:1.95em;display:flex;align-items:center;padding:0 .8em;border-top:1px solid var(--sep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qz-o.sel{background:linear-gradient(var(--hl1),var(--hl2));color:var(--hlfg)}
+.qz-o.ok{background:#1fa75a!important;color:#fff!important}
+.qz-o.bad{background:#d6453a!important;color:#fff!important}
+.qz-rv,.qz-row{display:flex;gap:.7em;align-items:center}
+.qz-art{flex:0 0 4.6em;height:4.6em;border-radius:.4em;background:linear-gradient(135deg,var(--hl2),#111) center/cover;box-shadow:0 .2em .6em rgba(0,0,0,.35)}
+.qz-rt{font-weight:800;line-height:1.15}
+.qz-ra{font-size:.82em;color:var(--dim)}
+.qz-rp{font-weight:800;color:var(--hl2);margin-top:.2em}
+.qz-cv{width:4.8em;height:4.8em;border-radius:.4em;background:#222 center/cover;flex:0 0 auto;box-shadow:0 .2em .6em rgba(0,0,0,.35)}
+.qz-two{display:flex;gap:1em;justify-content:center}
+.qz-two .qz-cv{width:4em;height:4em}
+.qz-cap{font-size:.7em;text-align:center;color:var(--dim);margin-top:.15em}
+.hg{position:absolute;inset:0;padding:.6em .8em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5em}
+.hg-a{font-size:.75em;color:var(--dim)}
+.hg-w{font-size:1.2em;font-weight:800;letter-spacing:.06em;text-align:center;line-height:1.3;max-width:100%}
+.hg-l{font-size:.9em;color:#e0453a}
+.hg-row{display:flex;gap:.35em;align-items:center}
+.hg-c{min-width:1.1em;text-align:center;font-size:1.05em;opacity:.75}
+.hg-c.cur{font-size:1.7em;font-weight:800;opacity:1;background:linear-gradient(var(--hl1),var(--hl2));color:var(--hlfg);border-radius:.3em;padding:0 .25em}
+.hg-c.used{opacity:.22;text-decoration:line-through}
+.hg-m{font-size:.8em;font-weight:700;min-height:1.2em}
+.mm{position:absolute;inset:0;padding:.5em .6em;display:flex;flex-direction:column;gap:.4em}
+.mm-h{display:flex;justify-content:space-between;font-size:.78em;color:var(--dim)}
+.mm-g{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:.35em;min-height:0}
+.mm-c{border-radius:.4em;background:linear-gradient(135deg,var(--hl1),var(--hl2)) center/cover;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.9);font-size:1.3em;font-weight:800;transition:transform .2s}
+.mm-c.done{opacity:.4}
+.mm-c.cur{outline:.2em solid var(--fg);outline-offset:.05em;transform:scale(1.05)}
 #yt-shell{position:fixed;top:-3000px;left:-3000px;width:320px;height:180px;opacity:0;pointer-events:none;overflow:hidden;z-index:1}
 #yt-shell iframe{width:100%;height:100%;border:0;display:block}
 #hint{position:fixed;right:22px;bottom:18px;max-width:250px;color:#7e8798;font-size:12px;line-height:1.55}
@@ -293,7 +330,7 @@ const HLN=['Theme','Blue','Green','Orange','Pink','Purple'];
 const FS=[.9,1,1.12], FSN=['Small','Normal','Large'];
 const BL=[0,10,20,60], BLN=['Always On','10 sec','20 sec','1 min'];
 const SENS=[16,11,7], SENSN=['Slow','Normal','Fast'];
-const DEF={body:'silver',screen:'classic',click:true,bright:1,hl:0,fs:1,backlight:0,sens:1,clock:true,startup:true,autoscroll:true};
+const DEF={body:'silver',screen:'classic',click:true,bright:1,hl:0,fs:1,backlight:0,sens:1,clock:true,startup:true,autoscroll:true,qd:1};
 const prefs=Object.assign({},DEF,jget('ipod_prefs',{}));
 const savePrefs=()=>jset('ipod_prefs',prefs);
 function applyPrefs(){
@@ -482,10 +519,11 @@ function ytPick(items,t){
 }
 async function findVideoId(t){
   const o=getVO(t); if(o) return o;
+  const cv=artGet('ipod_vid:'+vkey(t)); if(cv) return cv;
   for(const q of [ytQuery(t,true),ytQuery(t,false)]){
     let d=null; try{d=await ytSearch(q,PRIMARY_YT_KEY)}catch{}
     if(!d||!d.items||!d.items.length){try{d=await ytSearch(q,BACKUP_YT_KEY)}catch{}}
-    const b=ytPick(d&&d.items,t); if(b) return b.id.videoId;
+    const b=ytPick(d&&d.items,t); if(b){artSet('ipod_vid:'+vkey(t),b.id.videoId);return b.id.videoId}
   }
   return null;
 }
@@ -509,22 +547,23 @@ async function playTrack(i){
     if(queue.length>1&&failCount<3) setTimeout(()=>{if(my===playReq)nextTrack(true)},900);
     return;
   }
-  failCount=0; nowT.youtubeId=vid; startVideo(vid);
+  failCount=0; nowT.youtubeId=vid; const so=startOverride; startOverride=null; startVideo(vid,so||0);
   trackArt(nowT).then(u=>setMedia(nowT,u));
 }
-function startVideo(id){
-  if(ytPlayer&&ytReady){try{ytPlayer.loadVideoById(id);ytPlayer.unMute();ytPlayer.setVolume(vol);applySpeed();armUnmute();return}catch{}}
-  buildPlayer(id);
+function startVideo(id,start){
+  if(ytPlayer&&ytReady){try{ytPlayer.loadVideoById(start?{videoId:id,startSeconds:start}:id);ytPlayer.unMute();ytPlayer.setVolume(vol);applySpeed();armUnmute();return}catch{}}
+  buildPlayer(id,start);
 }
-function buildPlayer(id){
-  if(typeof YT==='undefined'||!YT.Player){pendingVid=id;return}
+function buildPlayer(id,start){
+  if(typeof YT==='undefined'||!YT.Player){pendingVid=id;pendingStart=start||0;return}
   $('#yt-shell').innerHTML='<div id="ytp"></div>'; ytReady=false;
   const pv={autoplay:1,mute:1,controls:0,disablekb:1,rel:0,playsinline:1,modestbranding:1,iv_load_policy:3};
   if(/^https?:/.test(location.protocol)) pv.origin=location.origin;
+  if(start) pv.start=start;
   ytPlayer=new YT.Player('ytp',{videoId:id,playerVars:pv,events:{
     onReady:e=>{ytReady=true;e.target.mute();e.target.playVideo();e.target.setVolume(vol);e.target.unMute();applySpeed();armUnmute()},
     onStateChange:e=>{
-      if(e.data===YT.PlayerState.PLAYING){playing=true;if(ytPlayer.isMuted&&ytPlayer.isMuted())ytPlayer.unMute()}
+      if(e.data===YT.PlayerState.PLAYING){playing=true;if(ytPlayer.isMuted&&ytPlayer.isMuted())ytPlayer.unMute();if(gameOnPlaying){const gf=gameOnPlaying;gameOnPlaying=null;try{gf()}catch{}}}
       else if(e.data===YT.PlayerState.PAUSED){playing=false}
       else if(e.data===YT.PlayerState.ENDED){playing=false;onEnd()}
       updateSb();refreshNow();
@@ -532,7 +571,7 @@ function buildPlayer(id){
     onError:()=>{toast('Playback error');failCount++;if(queue.length>1&&failCount<3)setTimeout(()=>nextTrack(true),700)}
   }});
 }
-window.onYouTubeIframeAPIReady=()=>{if(pendingVid){const v=pendingVid;pendingVid=null;buildPlayer(v)}};
+window.onYouTubeIframeAPIReady=()=>{if(pendingVid){const v=pendingVid;pendingVid=null;buildPlayer(v,pendingStart)}};
 {const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}
 function armUnmute(){setTimeout(()=>{try{if(ytPlayer&&ytPlayer.isMuted&&ytPlayer.isMuted()&&vol>0)toast('Tap the wheel to enable sound')}catch{}},1300)}
 const userGesture=()=>{try{if(AC&&AC.state==='suspended')AC.resume()}catch{}try{if(ytReady&&ytPlayer.isMuted&&ytPlayer.isMuted()&&vol>0)ytPlayer.unMute()}catch{}};
@@ -639,6 +678,9 @@ function render(dir){
   else if(s.type==='loading') vp.innerHTML='<div class="ld"><div class="spin"></div><div>'+esc(s.msg||'Loading…')+'</div></div>';
   else if(s.type==='search') renderSearch(s,vp);
   else if(s.type==='store') renderStore(s,vp);
+  else if(s.type==='quizq') renderQuizQ(s,vp);
+  else if(s.type==='hang') renderHang(s,vp);
+  else if(s.type==='memory') renderMemory(s,vp);
   else if(s.type==='spell') renderSpell(s,vp);
   else if(s.type==='clock') renderClock(s,vp);
   else if(s.type==='stopwatch') renderStopwatch(s,vp);
@@ -784,6 +826,9 @@ function wheelStep(d){
   else if(s.type==='calendar'){s.m+=d;tick();renderCalendar(s,$('#viewport'))}
   else if(s.type==='brick'){brickMove(s,d)}
   else if(s.type==='store'){storeStep(s,d)}
+  else if(s.type==='quizq'){quizStep(s,d)}
+  else if(s.type==='hang'){hangStep(s,d)}
+  else if(s.type==='memory'){memStep(s,d)}
 }
 function selectItem(){
   const s=scr(); if(!s) return;
@@ -801,11 +846,14 @@ function selectItem(){
   else if(s.type==='calendar'){s.m=0;renderCalendar(s,$('#viewport'))}
   else if(s.type==='brick'){brickToggle(s)}
   else if(s.type==='store'){storeSelect(s)}
+  else if(s.type==='quizq'){quizPick(s,s.sel)}
+  else if(s.type==='hang'){hangSelect(s)}
+  else if(s.type==='memory'){memSelect(s)}
 }
 const btnMenu=()=>{tick();back()};
 const btnPlay=()=>{tick();if(scr().type==='brick'){brickToggle(scr());return}togglePlay()};
 const btnNext=()=>{tick();if(scr().type==='stopwatch'){swLap(scr());return}nextTrack()};
-const btnPrev=()=>{tick();prevTrack()};
+const btnPrev=()=>{tick();const s=scr();if(s&&s.type==='quizq'){quizReplay(s);return}prevTrack()};
 
 (function wheel(){
   const w=$('#wheel'), dot=$('#wdot'); let tr=null, holdT=null, holdIv=null, holdOn=false, pwrT=null, pwrDone=false;
@@ -854,7 +902,7 @@ document.addEventListener('keydown',e=>{
   if(inp){if(e.key==='Enter'){e.preventDefault();submitSearch()}else if(e.key==='Escape'){document.activeElement.blur();back()}return}
   if(e.key==='h'||e.key==='H'){setLock(!locked);return}
   if(locked){flashHold();return}
-  const s=scr(), stepKeys=s&&['flow','brick','spell','calendar','store'].includes(s.type);
+  const s=scr(), stepKeys=s&&['flow','brick','spell','calendar','store','quizq','hang','memory'].includes(s.type);
   switch(e.key){
     case 'ArrowDown': e.preventDefault();wheelStep(1);break;
     case 'ArrowUp': e.preventDefault();wheelStep(-1);break;
@@ -878,6 +926,7 @@ function ctxTarget(){
 function cycleSleep(){const o=[0,15,30,45,60,'end'];const cur=sleepLabel==='Off'?0:sleepLabel==='End of Track'?'end':parseInt(sleepLabel);setSleep(o[(o.indexOf(cur)+1)%o.length])}
 function ctxMenu(){
   const s=scr(); if(s&&s.ctx) return;
+  if(s&&s.noCtx) return;
   if(s&&s.onLong){tick();s.onLong();return}
   const t=ctxTarget(); if(!t){toast('Nothing to show options for');return}
   const isNow=sameT(t,nowT);
@@ -951,6 +1000,7 @@ function mainMenu(){
     {label:'Favorites',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Favorites',getFavs(),{empty:'No favorites yet'}))},
     {label:'Recently Played',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Recently Played',getRecent(),{empty:'Nothing played yet'}))},
     queue.length>1&&{label:'Up Next',chev:1,art:MIXART,onSelect:()=>push(queueScreen())},
+    {label:'Music Games',chev:1,art:MIXART,onSelect:()=>push(gamesMenu())},
     {label:'Extras',chev:1,art:MIXART,onSelect:()=>push(extrasMenu())},
     {label:'Shuffle Songs',art:MIXART,onSelect:shuffleSongs},
     {label:'Settings',chev:1,art:MIXART,onSelect:()=>push(settingsMenu())}
@@ -1295,8 +1345,7 @@ function extrasMenu(){
     {label:'Clock',chev:1,onSelect:()=>push({type:'clock',title:'Clock'})},
     {label:'Stopwatch',chev:1,onSelect:()=>{const s={type:'stopwatch',title:'Stopwatch',t:0,run:false,t0:0,laps:[]};s.onLong=()=>swReset(s);push(s)}},
     {label:'Calendar',chev:1,onSelect:()=>push({type:'calendar',title:'Calendar',m:0})},
-    {label:'Brick',chev:1,onSelect:()=>push({type:'brick',title:'Brick'})},
-    {label:'Music Quiz',chev:1,onSelect:startQuiz}
+    {label:'Music Games',chev:1,onSelect:()=>push(gamesMenu())}
   ]);
 }
 function renderClock(s,vp){
@@ -1400,33 +1449,336 @@ function brickDraw(s){
   if(g.over) c.fillText('Game over — click to restart   Best '+g.hi,g.w/2,g.h/2+30);
   else if(!g.run) c.fillText('Click to launch · turn wheel to move',g.w/2,g.h/2+30);
 }
-/* Music Quiz — name the artist; songs come from your library */
-function startQuiz(){
-  const lib=libSongs().filter(t=>t.artistId), artists=[...new Set(lib.map(t=>t.artist))];
-  if(lib.length<4||artists.length<4){toast('Need 4+ songs by 4+ artists in your library');return}
-  const qs=listScreen('Quiz',()=>qs.opts||[]); qs.total=10; qs.round=0; qs.score=0;
-  qs.onLeave=()=>{quizMode=false;try{if(ytPlayer)ytPlayer.pauseVideo()}catch{}};
-  quizMode=true; push(qs); quizNext(qs,lib,artists);
+/* ═════════ Music Games: Guess the Song, Name the Artist, Cover Blur, Which Came First, Hangman, Cover Match ═════════ */
+let startOverride=null, gameOnPlaying=null, pendingStart=0;
+const DIFFN=['Easy','Medium','Hard'], CLIPS=[12,8,4], BLURS=[16,12,8];
+const getScores=()=>jget('ipod_scores',{});
+function saveScore(key,score){const s=getScores();if(score>(s[key]||0)){s[key]=score;jset('ipod_scores',s);return true}return false}
+const dedupeBy=(arr,f)=>{const seen=new Set();return arr.filter(x=>{const k=f(x);if(seen.has(k))return false;seen.add(k);return true})};
+const bgify=root=>$$('[data-bg]',root||document).forEach(e=>{e.style.backgroundImage='url("'+e.dataset.bg+'")'});
+
+function gamesMenu(){
+  return listScreen('Music Games',()=>{
+    const sc=getScores(), b=k=>'Best '+(sc[k]||0);
+    return [
+      {label:'Guess the Song',sub:'Hear a clip, pick the title · '+b('song'),chev:1,onSelect:()=>push(sourceMenu('Guess the Song',true,'Clip',src=>startGame('Guess the Song',src,p=>makeSongQuiz(p,'title'),4)))},
+      {label:'Name the Artist',sub:'Hear a clip, pick who sings it · '+b('artist'),chev:1,onSelect:()=>push(sourceMenu('Name the Artist',true,'Clip',src=>startGame('Name the Artist',src,p=>makeSongQuiz(p,'artist'),4)))},
+      {label:'Cover Blur',sub:'Name the album as it sharpens · '+b('cover'),chev:1,onSelect:()=>push(sourceMenu('Cover Blur',true,'Sharpens in',src=>startGame('Cover Blur',src,makeCoverQuiz,4)))},
+      {label:'Which Came First?',sub:'Pick the older album · '+b('first'),chev:1,onSelect:startFirstGame},
+      {label:'Song Hangman',sub:'Spell the title with the wheel · '+b('hang'),chev:1,onSelect:()=>push(sourceMenu('Song Hangman',false,'',src=>startGame('Song Hangman',src,makeHangman,3)))},
+      {label:'Cover Match',sub:'Match the album covers · '+b('match'),chev:1,onSelect:()=>push(sourceMenu('Cover Match',false,'',src=>startGame('Cover Match',src,makeMatch,6)))},
+      {label:'Brick',sub:'Breakout, wheel to move · Best '+(parseInt(lsGet('ipod_brick_hi'))||0),chev:1,onSelect:()=>push({type:'brick',title:'Brick'})}
+    ];
+  },{rowH:'two'});
 }
-function quizNext(qs,lib,artists){
-  if(qs.round>=qs.total){
-    quizMode=false; try{if(ytPlayer)ytPlayer.pauseVideo()}catch{}
-    const i=stack.indexOf(qs);
-    if(i>=0){stack[i]=textScreen('Quiz Over','You scored '+qs.score+' / '+qs.total+'\n\n'+(qs.score>=8?'🎧 Music genius!':qs.score>=5?'Nice ear!':'Keep listening!')+'\n\nPress MENU to exit.');if(scr()===stack[i])render()}
-    return;
+function sourceMenu(title,hasDiff,diffWord,start){
+  return listScreen(title,()=>[
+    hasDiff&&{label:'Difficulty',sub:diffWord?diffWord+' '+(title==='Cover Blur'?BLURS[prefs.qd]:CLIPS[prefs.qd])+' sec':'',value:()=>DIFFN[prefs.qd],onSelect:()=>{prefs.qd=(prefs.qd+1)%3;savePrefs();render()}},
+    {label:'My Library',sub:libSongs().length+' songs',chev:1,onSelect:()=>start({kind:'lib'})},
+    {label:TOP10.label,sub:'Mix',chev:1,onSelect:()=>start({kind:'top'})},
+    ...GENRES.map(g=>({label:g.label,sub:'Genre',bg:grad(g),chev:1,onSelect:()=>start({kind:'tag',g})})),
+    ...DECADES.map(g=>({label:g.label,sub:'Decade',bg:grad(g),chev:1,onSelect:()=>start({kind:'tag',g})}))
+  ],{rowH:'two',preview:true});
+}
+async function gamePool(src){
+  if(src.kind==='lib') return libSongs();
+  if(src.kind==='top') return top10();
+  return tagMix(src.g);
+}
+async function startGame(title,src,run,minTracks){
+  const ph={type:'loading',title,msg:'Getting songs…'}; push(ph);
+  let pool=[]; try{pool=await gamePool(src)}catch(e){console.warn(e)}
+  pool=dedupeBy(pool.filter(t=>t&&t.title&&t.artist),t=>vkey(t));
+  if(stack.indexOf(ph)<0) return;
+  let g;
+  if(pool.length<minTracks) g=textScreen(title,'Not enough songs for this game ('+pool.length+' found).\n\nTry a genre or decade, or play more music to grow your library.');
+  else { try{g=await run(pool)}catch(e){console.warn(e);g=textScreen(title,'Could not start this game.')} }
+  const i=stack.indexOf(ph); if(i<0) return;
+  g=g||textScreen(title,'Could not start this game.');
+  stack[i]=g; g.sel=g.sel||0; if(scr()===g) render();
+}
+
+/* —— generic multiple-choice engine —— */
+function makeQuizScreen(cfg){
+  const s={type:'quizq',title:cfg.title,cfg,round:0,score:0,streak:0,hits:0,opts:[],sel:0,locked:true,replays:0,noCtx:true,topHtml:'<div class="qz-t1">Get ready…</div>',q:dedupeBy(shuffleArr(cfg.pool||[]),t=>vkey(t))};
+  s.onLeave=()=>quizCleanup(s);
+  setTimeout(()=>quizNext(s),80);
+  return s;
+}
+function quizCleanup(s){
+  s.dead=true; clearInterval(s._iv); clearTimeout(s._clipT); clearTimeout(s._nextT); clearTimeout(s._fb); gameOnPlaying=null;
+  if(quizMode||s.usedAudio){quizMode=false;try{if(ytPlayer)ytPlayer.pauseVideo()}catch{}nowT=null;queue=[];qi=-1;playing=false;updateSb()}
+}
+async function quizNext(s){
+  if(s.dead||scr()!==s) return;
+  if(s.round>=s.cfg.rounds) return quizFinish(s);
+  s.round++; s.locked=true; s.replays=0; s.t0=0; clearInterval(s._iv); clearTimeout(s._clipT);
+  s.title=s.cfg.title+' '+s.round+'/'+s.cfg.rounds+' · '+s.score; $('#sb-title').textContent=s.title;
+  s.topHtml='<div class="qz-t1">Loading…</div>'; s.opts=[]; renderQuizQ(s,$('#viewport'));
+  let r=null; try{r=await s.cfg.gen(s)}catch(e){console.warn(e)}
+  if(s.dead||scr()!==s) return;
+  if(!r){toast('Ran out of playable rounds');s.cfg.rounds=s.round-1;return quizNext(s)}
+  s.cur=r; s.opts=r.opts; s.sel=0; s.topHtml=r.topHtml; s.locked=false; s.t0=Date.now(); s.limit=r.limit||20;
+  renderQuizQ(s,$('#viewport'));
+  if(r.onStart) r.onStart(s);
+  s._iv=setInterval(()=>quizTick(s),200);
+}
+const quizElapsed=s=>s.t0?(Date.now()-s.t0)/1000:0;
+function quizTick(s){
+  if(s.dead||scr()!==s){clearInterval(s._iv);return}
+  if(s.locked) return;
+  const el=quizElapsed(s), f=$('#qz-fill'); if(f) f.style.width=(clamp(el/s.limit,0,1)*100)+'%';
+  if(s.cur.onTick) s.cur.onTick(s,el);
+  if(s.t0&&el>=s.limit) quizPick(s,-1);
+}
+function quizPick(s,i){
+  if(s.locked||s.dead) return;
+  s.locked=true; clearTimeout(s._clipT);
+  const el=quizElapsed(s), o=i>=0?s.opts[i]:null, ok=!!(o&&o.correct);
+  let pts=0;
+  if(ok){s.streak++;s.hits++;pts=s.cfg.points(s,el)+Math.min(50,(s.streak-1)*10);s.score+=pts}else s.streak=0;
+  $$('#qz-opts .qz-o').forEach((row,k)=>{row.classList.remove('sel');if(s.opts[k]&&s.opts[k].correct)row.classList.add('ok');else if(k===i)row.classList.add('bad')});
+  const top=$('#qz-top'); if(top){top.innerHTML=s.cur.reveal(ok,pts);bgify(top)}
+  s.title=s.cfg.title+' '+s.round+'/'+s.cfg.rounds+' · '+s.score; $('#sb-title').textContent=s.title;
+  toast(ok?'✓ +'+pts:(i<0?'⏱ Time\'s up':'✗ Not quite'));
+  if(s.cur.onReveal) s.cur.onReveal(s);
+  s._nextT=setTimeout(()=>quizNext(s),2400);
+}
+function quizFinish(s){
+  const total=s.cfg.rounds, hits=s.hits, score=s.score;
+  quizCleanup(s);
+  const hi=saveScore(s.cfg.key,score);
+  const res=textScreen(s.cfg.title+' — Results','Score: '+score+'\nCorrect: '+hits+' / '+total+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores()[s.cfg.key]||0))+'\n\nPress MENU to go back.');
+  res.noCtx=true;
+  const i=stack.indexOf(s); if(i>=0){stack[i]=res;if(scr()===res)render()}
+}
+function quizStep(s,d){
+  if(s.locked||!s.opts.length) return;
+  const n=clamp(s.sel+d,0,s.opts.length-1);
+  if(n!==s.sel){s.sel=n;tick();$$('#qz-opts .qz-o').forEach((r,k)=>r.classList.toggle('sel',k===s.sel))}
+}
+function quizReplay(s){if(s.locked||s.dead||!s.cur||!s.cur.replay)return;s.cur.replay(s)}
+function renderQuizQ(s,vp){
+  vp.innerHTML='<div class="qz"><div class="qz-top" id="qz-top">'+s.topHtml+'</div><div class="qz-bar"><i id="qz-fill"></i></div><div class="qz-opts" id="qz-opts">'+
+    s.opts.map((o,i)=>'<div class="qz-o'+(i===s.sel&&!s.locked?' sel':'')+'">'+esc(o.label)+'</div>').join('')+'</div></div>';
+  $$('#qz-opts .qz-o').forEach((row,i)=>{row.onclick=()=>{if(locked){flashHold();return}s.sel=i;quizPick(s,i)}});
+  bgify($('#qz-top'));
+}
+function revealHtml(t,ok,pts,cover){
+  if(!cover) trackArt(t).then(u=>{const e=$('#qz-art');if(e&&u)e.style.backgroundImage='url("'+u+'")'}).catch(()=>{});
+  return '<div class="qz-rv"><div class="qz-art" id="qz-art"'+(cover?' data-bg="'+esc(cover)+'"':'')+'></div><div><div class="qz-rt">'+esc(t.title)+'</div><div class="qz-ra">'+esc(artistLine(t))+'</div><div class="qz-rp">'+(ok?'+'+pts:'—')+'</div></div></div>';
+}
+
+/* —— Guess the Song / Name the Artist (audio clips) —— */
+function makeSongQuiz(pool,mode){
+  const field=mode==='artist'?'artist':'title', name=mode==='artist'?'Name the Artist':'Guess the Song';
+  if(new Set(pool.map(t=>norm(t[field]))).size<4) return textScreen(name,'Not enough different '+(mode==='artist'?'artists':'songs')+' in this source.\n\nTry a genre or decade.');
+  return makeQuizScreen({key:mode==='artist'?'artist':'song',title:name,rounds:Math.min(10,pool.length),pool,gen:songRound,mode,
+    points:(s,el)=>Math.max(20,100-Math.floor(el)*4-s.replays*15)});
+}
+function quizPlay(q,t,st,L){
+  q.usedAudio=true; quizMode=true; queue=[{...t}]; qi=0; failCount=0; startOverride=st;
+  gameOnPlaying=()=>{
+    if(q.dead) return;
+    q.t0=Date.now(); clearTimeout(q._clipT);
+    q._clipT=setTimeout(()=>{try{ytPlayer.pauseVideo()}catch{}const c=$('#qz-clue');if(c&&!q.locked)c.textContent='Clip over — press ⏮ to replay'},L*1000);
+  };
+  clearTimeout(q._fb); q._fb=setTimeout(()=>{if(!q.t0)q.t0=Date.now()},9000);
+  playTrack(0);
+}
+async function songRound(s){
+  const cfg=s.cfg, field=cfg.mode==='artist'?'artist':'title';
+  for(let tries=0;tries<5;tries++){
+    const t=s.q.shift(); if(!t) return null;
+    let vid=null; try{vid=await findVideoId(t)}catch{}
+    if(!vid) continue;
+    const others=dedupeBy(cfg.pool.filter(x=>norm(x[field])!==norm(t[field])),x=>norm(x[field]));
+    if(others.length<3) return null;
+    const names=shuffleArr([t[field],...shuffleArr(others).slice(0,3).map(x=>x[field])]);
+    const L=CLIPS[prefs.qd], dur=t.duration||0;
+    const st=dur>60?Math.floor(clamp(dur*(.2+Math.random()*.35),12,Math.max(12,dur-35))):40;
+    return {
+      limit:L+18, t,
+      topHtml:'<div class="qz-t1">🎧 Listening…</div><div class="qz-t2" id="qz-clue">'+(cfg.mode==='artist'?'Who sings this?':'Which song is this?')+'</div><div class="qz-t3">⏮ replays the clip (−15 pts) · clues appear over time</div>',
+      opts:names.map(n=>({label:n,correct:n===t[field]})),
+      onStart:q=>{q.t0=0;quizPlay(q,t,st,L)},
+      replay:q=>{
+        q.replays++; clearTimeout(q._clipT);
+        gameOnPlaying=()=>{q._clipT=setTimeout(()=>{try{ytPlayer.pauseVideo()}catch{}},L*1000)};
+        try{ytPlayer.seekTo(st,true);ytPlayer.playVideo()}catch{}
+        toast('Replaying…');
+      },
+      onTick:(q,el)=>{
+        const c=$('#qz-clue'); if(!c||q.locked||!q.t0) return;
+        if(cfg.mode==='artist'){ if(el>=12) c.textContent='Song: '+t.title; else if(el>=6) c.textContent='Song starts with "'+t.title.charAt(0)+'"' }
+        else { if(el>=12) c.textContent='Artist: '+t.artist; else if(el>=6) c.textContent='Artist starts with "'+t.artist.charAt(0)+'"' }
+      },
+      reveal:(ok,pts)=>revealHtml(t,ok,pts)
+    };
   }
-  qs.round++;
-  const t=lib[Math.floor(Math.random()*lib.length)];
-  const names=shuffleArr([t.artist,...shuffleArr(artists.filter(a=>a!==t.artist)).slice(0,3)]);
-  qs.title='Quiz '+qs.round+'/'+qs.total+' · '+qs.score+' pts'; qs.locked=false; qs.sel=0;
-  qs.opts=names.map(n=>({label:n,onSelect:()=>{
-    if(qs.locked) return; qs.locked=true;
-    const ok=n===t.artist; if(ok) qs.score++;
-    toast(ok?'✓ Correct!':'✗ It was '+t.artist+' — '+t.title);
-    setTimeout(()=>{if(scr()===qs)quizNext(qs,lib,artists)},1800);
-  }}));
-  queue=[{...t}]; failCount=0; playTrack(0);
-  if(scr()===qs) render();
+  return null;
+}
+
+/* —— Cover Blur —— */
+function makeCoverQuiz(pool){
+  const p=dedupeBy(pool.filter(t=>t.albumId&&t.album),t=>t.albumId);
+  if(new Set(p.map(t=>norm(t.album))).size<4) return textScreen('Cover Blur','Not enough different albums in this source.\n\nTry a genre or decade.');
+  return makeQuizScreen({key:'cover',title:'Cover Blur',rounds:Math.min(10,p.length),pool:p,gen:coverRound,
+    points:s=>Math.max(20,Math.round(100-quizElapsed(s)*90/s.limit))});
+}
+async function coverRound(s){
+  const D=BLURS[prefs.qd];
+  for(let tries=0;tries<6;tries++){
+    const t=s.q.shift(); if(!t) return null;
+    const u=await storeCover(t.albumId,t.artistId).catch(()=>null); if(!u) continue;
+    const others=dedupeBy(s.cfg.pool.filter(x=>norm(x.album)!==norm(t.album)),x=>norm(x.album));
+    if(others.length<3) return null;
+    const names=shuffleArr([t.album,...shuffleArr(others).slice(0,3).map(x=>x.album)]);
+    return {
+      limit:D+4,
+      topHtml:'<div class="qz-row"><div class="qz-cv" id="qz-cv" data-bg="'+esc(u)+'" style="filter:blur(18px)"></div><div><div class="qz-t1">Name the album</div><div class="qz-t3">The cover sharpens — answer fast for more points</div></div></div>',
+      opts:names.map(n=>({label:n,correct:n===t.album})),
+      onStart:q=>{q.t0=Date.now();const cv=$('#qz-cv');if(cv){void cv.offsetWidth;cv.style.transition='filter '+D+'s linear';cv.style.filter='blur(0px)'}},
+      reveal:(ok,pts)=>revealHtml({title:t.album,artist:t.artist,features:[]},ok,pts,u)
+    };
+  }
+  return null;
+}
+
+/* —— Which Came First? —— */
+async function startFirstGame(){
+  const ph={type:'loading',title:'Which Came First?',msg:'Loading albums…'}; push(ph);
+  const lib=libArtists().filter(a=>a.id).slice(0,4);
+  const arts=dedupeBy([...shuffleArr(lib),...shuffleArr(STORE_KNOWN)],a=>a.id).slice(0,5);
+  const data=[];
+  for(const a of arts){
+    if(stack.indexOf(ph)<0) return;
+    try{
+      const d=await mb('release-group/?artist='+a.id+'&limit=60&fmt=json');
+      const al=dedupeBy((d['release-groups']||[]).filter(g=>g['primary-type']==='Album'&&!(g['secondary-types']||[]).length&&!ED_RE.test(g.title)&&/^\d{4}/.test(g['first-release-date']||'')),g=>norm(g.title));
+      if(al.length>=2) data.push({albums:al.map(g=>({id:g.id,title:g.title,year:+g['first-release-date'].slice(0,4),artistId:a.id,artist:a.name}))});
+    }catch{}
+    await sleep(150);
+  }
+  const i=stack.indexOf(ph); if(i<0) return;
+  const g=data.length?makeQuizScreen({key:'first',title:'Which Came First?',rounds:10,pool:[],data,gen:firstRound,points:(s,el)=>Math.max(20,100-Math.floor(el)*6)}):textScreen('Which Came First?','Could not load albums right now.\n\nTry again in a moment.');
+  stack[i]=g; if(scr()===g) render();
+}
+async function firstRound(s){
+  const groups=s.cfg.data; s._used=s._used||new Set();
+  for(let tries=0;tries<14;tries++){
+    const grp=groups[Math.floor(Math.random()*groups.length)], al=shuffleArr(grp.albums), A=al[0], B=al.find(x=>x.year!==A.year&&x.id!==A.id);
+    if(!B) continue;
+    const diff=Math.abs(A.year-B.year), maxDiff=Math.max(1,11-s.round);
+    if(diff>maxDiff&&tries<9) continue;
+    const key=[A.id,B.id].sort().join('|'); if(s._used.has(key)) continue; s._used.add(key);
+    const [ca,cb]=await Promise.all([storeCover(A.id,A.artistId).catch(()=>null),storeCover(B.id,B.artistId).catch(()=>null)]);
+    const first=A.year<B.year?A:B;
+    const two=(yrs)=>'<div class="qz-two"><div><div class="qz-cv"'+(ca?' data-bg="'+esc(ca)+'"':'')+'></div><div class="qz-cap">A'+(yrs?' · '+A.year:'')+'</div></div><div><div class="qz-cv"'+(cb?' data-bg="'+esc(cb)+'"':'')+'></div><div class="qz-cap">B'+(yrs?' · '+B.year:'')+'</div></div></div>';
+    return {
+      limit:16,
+      topHtml:'<div class="qz-t1" style="text-align:center">Which came out first?</div>'+two(false),
+      opts:[A,B].map((x,i)=>({label:(i?'B':'A')+' · '+x.title,correct:x===first})),
+      reveal:ok=>'<div class="qz-t1" style="text-align:center">'+(ok?'Correct!':'Not quite')+' — '+esc(first.title)+' came first</div>'+two(true)
+    };
+  }
+  return null;
+}
+
+/* —— Song Hangman (wheel picks letters) —— */
+const HL='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function hangWord(title){
+  const w=title.replace(/\s*[\(\[].*?[\)\]]/g,'').replace(/\s+-\s+.*$/,'').trim().toUpperCase();
+  return (/^[A-Z0-9 '!?.,&-]{3,24}$/.test(w)&&(w.match(/[A-Z]/g)||[]).length>=3)?w:null;
+}
+function makeHangman(pool){
+  const words=dedupeBy(pool.map(t=>({t,w:hangWord(t.title)})).filter(x=>x.w),x=>x.w);
+  if(words.length<2) return textScreen('Song Hangman','Not enough usable song titles in this source.\n\nTry a genre or decade.');
+  const s={type:'hang',title:'Song Hangman',words:shuffleArr(words).slice(0,5),i:0,score:0,hits:0,noCtx:true};
+  s.onLeave=()=>clearTimeout(s._nt);
+  hangInit(s); return s;
+}
+function hangInit(s){const c=s.words[s.i];s.word=c.w;s.t=c.t;s.used=new Set();s.lives=6;s.ci=0;s.msg='';s.done=false;s.title='Hangman '+(s.i+1)+'/'+s.words.length+' · '+s.score}
+function renderHang(s,vp){
+  const shown=[...s.word].map(c=>/[A-Z]/.test(c)?((s.used.has(c)||s.done)?c:'_'):(c===' '?'\u00a0\u00a0':c)).join(' ');
+  let row=''; for(let o=-4;o<=4;o++){const ch=HL[(s.ci+o+HL.length*2)%HL.length];row+='<span class="hg-c'+(o===0?' cur':'')+(s.used.has(ch)?' used':'')+'">'+ch+'</span>'}
+  vp.innerHTML='<div class="hg"><div class="hg-a">Artist: '+esc(artistLine(s.t))+'</div><div class="hg-w">'+esc(shown)+'</div><div class="hg-l">'+'♥'.repeat(s.lives)+'<span style="opacity:.25">'+'♥'.repeat(6-s.lives)+'</span></div><div class="hg-row">'+row+'</div><div class="hg-m">'+esc(s.msg)+'</div></div>';
+  $('#sb-title').textContent=s.title;
+}
+function hangStep(s,d){if(s.done)return;s.ci=(s.ci+d+HL.length)%HL.length;tick();renderHang(s,$('#viewport'))}
+function hangSelect(s){
+  if(s.done) return; const ch=HL[s.ci];
+  if(s.used.has(ch)){toast('Already guessed '+ch);return}
+  s.used.add(ch); tick();
+  if(s.word.includes(ch)){
+    s.msg='✓ '+ch;
+    if([...s.word].filter(c=>/[A-Z]/.test(c)).every(c=>s.used.has(c))){hangEnd(s,true);return}
+  }else{
+    s.lives--; s.msg='✗ no '+ch;
+    if(s.lives<=0){hangEnd(s,false);return}
+  }
+  renderHang(s,$('#viewport'));
+}
+function hangEnd(s,win){
+  s.done=true;
+  if(win){const pts=50+s.lives*10;s.score+=pts;s.hits++;s.msg='🎉 +'+pts}else s.msg='💀 It was "'+s.t.title+'"';
+  s.title='Hangman '+(s.i+1)+'/'+s.words.length+' · '+s.score; renderHang(s,$('#viewport'));
+  clearTimeout(s._nt);
+  s._nt=setTimeout(()=>{
+    if(scr()!==s) return;
+    s.i++;
+    if(s.i>=s.words.length){hangFinish(s);return}
+    hangInit(s); renderHang(s,$('#viewport'));
+  },2200);
+}
+function hangFinish(s){
+  const hi=saveScore('hang',s.score);
+  const res=textScreen('Hangman — Results','Score: '+s.score+'\nSolved: '+s.hits+' / '+s.words.length+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores().hang||0))+'\n\nPress MENU to go back.');
+  res.noCtx=true; const i=stack.indexOf(s); if(i>=0){stack[i]=res;if(scr()===res)render()}
+}
+
+/* —— Cover Match (memory) —— */
+async function makeMatch(pool){
+  const albums=dedupeBy(pool.filter(t=>t.albumId&&t.album),t=>t.albumId).slice(0,12);
+  if(albums.length<6) return textScreen('Cover Match','Need at least 6 different albums in this source.\n\nTry a genre or decade.');
+  const arts=await Promise.all(albums.map(async t=>({t,u:await storeCover(t.albumId,t.artistId).catch(()=>null)})));
+  const chosen=[...arts.filter(x=>x.u),...arts.filter(x=>!x.u)].slice(0,6);
+  const cards=shuffleArr(chosen.flatMap((x,i)=>[{pair:i,u:x.u,label:x.t.album},{pair:i,u:x.u,label:x.t.album}]));
+  const s={type:'memory',title:'Cover Match',cards,ci:0,first:null,lock:false,moves:0,matched:0,t0:Date.now(),noCtx:true};
+  s.onLeave=()=>clearTimeout(s._nt);
+  return s;
+}
+function renderMemory(s,vp){
+  vp.innerHTML='<div class="mm"><div class="mm-h"><span>Moves '+s.moves+'</span><span>Pairs '+s.matched+'/6</span></div><div class="mm-g" id="mm-g"></div></div>';
+  const g=$('#mm-g');
+  s.cards.forEach((c,i)=>{
+    const e=document.createElement('div'); e.className='mm-c'+(c.done?' done':'')+(i===s.ci?' cur':'');
+    if(c.up||c.done){
+      if(c.u) e.style.backgroundImage='url("'+c.u+'")';
+      else{e.style.background='hsl('+((c.pair*57)%360)+',65%,45%)';e.textContent=(c.label||'?').charAt(0).toUpperCase()}
+    }else e.textContent='★';
+    e.onclick=()=>{if(locked){flashHold();return}s.ci=i;memSelect(s)};
+    g.appendChild(e);
+  });
+}
+function memStep(s,d){if(s.lock)return;s.ci=clamp(s.ci+d,0,s.cards.length-1);tick();renderMemory(s,$('#viewport'))}
+function memSelect(s){
+  if(s.lock) return; const c=s.cards[s.ci]; if(c.up||c.done) return;
+  tick(); c.up=true;
+  if(s.first==null){s.first=s.ci;renderMemory(s,$('#viewport'));return}
+  s.moves++; const f=s.cards[s.first];
+  if(f.pair===c.pair){
+    f.done=c.done=true; f.up=c.up=false; s.matched++; s.first=null;
+    renderMemory(s,$('#viewport'));
+    if(s.matched===6){
+      const sec=Math.round((Date.now()-s.t0)/1000), score=Math.max(50,700-s.moves*20-sec*3), hi=saveScore('match',score);
+      const res=textScreen('Cover Match — Results','Solved in '+s.moves+' moves ('+sec+' sec)\nScore: '+score+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores().match||0))+'\n\nPress MENU to go back.');
+      res.noCtx=true; s._nt=setTimeout(()=>{const i=stack.indexOf(s);if(i>=0){stack[i]=res;if(scr()===res)render()}},1000);
+    }
+  }else{
+    s.lock=true; renderMemory(s,$('#viewport'));
+    s._nt=setTimeout(()=>{f.up=false;c.up=false;s.first=null;s.lock=false;if(scr()===s)renderMemory(s,$('#viewport'))},900);
+  }
 }
 
 /* ═════════ Hitzstar Store (iTunes-style home, artist and album pages) ═════════ */
