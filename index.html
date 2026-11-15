@@ -1107,7 +1107,7 @@ function settingsMenu(){
 }
 
 /* ═════════ search ═════════ */
-function submitSearch(){const s=scr();if(!s||s.type!=='search')return;const q=($('#q')&&$('#q').value||s.q||'').trim();if(!q){toast('Type something to search');return}try{document.activeElement.blur()}catch{}doSearch(q)}
+function submitSearch(){const s=scr();if(!s||s.type!=='search')return;const q=($('#q')&&$('#q').value||s.q||'').trim();if(!q){toast('Type something to search');return}try{document.activeElement.blur()}catch{}if(s.pickCb){pickSearch(q,s.pickCb);return}doSearch(q)}
 async function doSearch(q){
   saveSearch(q);
   const ph={type:'loading',title:'Searching',msg:'"'+q+'"'}; push(ph);
@@ -1334,7 +1334,7 @@ function renderSpell(s,vp){
 function spellSelect(s){
   const ch=CHARS[s.ci]; tick();
   if(ch==='⌫') s.text=s.text.slice(0,-1);
-  else if(ch==='✓'){if(!s.text.trim()){toast('Spell something first');return}doSearch(s.text.trim());return}
+  else if(ch==='✓'){if(!s.text.trim()){toast('Spell something first');return}if(s.pickCb){pickSearch(s.text.trim(),s.pickCb);return}doSearch(s.text.trim());return}
   else s.text+=ch;
   renderSpell(s,$('#viewport'));
 }
@@ -1461,6 +1461,7 @@ function gamesMenu(){
   return listScreen('Music Games',()=>{
     const sc=getScores(), b=k=>'Best '+(sc[k]||0);
     return [
+      {label:'Artist Games',sub:'Quizzes about one artist, with a Superfan rank',chev:1,onSelect:()=>push(artistGamePicker())},
       {label:'Guess the Song',sub:'Hear a clip, pick the title · '+b('song'),chev:1,onSelect:()=>push(sourceMenu('Guess the Song',true,'Clip',src=>startGame('Guess the Song',src,p=>makeSongQuiz(p,'title'),4)))},
       {label:'Name the Artist',sub:'Hear a clip, pick who sings it · '+b('artist'),chev:1,onSelect:()=>push(sourceMenu('Name the Artist',true,'Clip',src=>startGame('Name the Artist',src,p=>makeSongQuiz(p,'artist'),4)))},
       {label:'Cover Blur',sub:'Name the album as it sharpens · '+b('cover'),chev:1,onSelect:()=>push(sourceMenu('Cover Blur',true,'Sharpens in',src=>startGame('Cover Blur',src,makeCoverQuiz,4)))},
@@ -1536,7 +1537,7 @@ function quizPick(s,i){
   s.locked=true; clearTimeout(s._clipT);
   const el=quizElapsed(s), o=i>=0?s.opts[i]:null, ok=!!(o&&o.correct);
   let pts=0;
-  if(ok){s.streak++;s.hits++;pts=s.cfg.points(s,el)+Math.min(50,(s.streak-1)*10);s.score+=pts}else s.streak=0;
+  if(ok){s.streak++;s.hits++;pts=(s.cur.pts||s.cfg.points)(s,el)+Math.min(50,(s.streak-1)*10);s.score+=pts}else s.streak=0;
   $$('#qz-opts .qz-o').forEach((row,k)=>{row.classList.remove('sel');if(s.opts[k]&&s.opts[k].correct)row.classList.add('ok');else if(k===i)row.classList.add('bad')});
   const top=$('#qz-top'); if(top){top.innerHTML=s.cur.reveal(ok,pts);bgify(top)}
   s.title=s.cfg.title+' '+s.round+'/'+s.cfg.rounds+' · '+s.score; $('#sb-title').textContent=s.title;
@@ -1548,7 +1549,7 @@ function quizFinish(s){
   const total=s.cfg.rounds, hits=s.hits, score=s.score;
   quizCleanup(s);
   const hi=saveScore(s.cfg.key,score);
-  const res=textScreen(s.cfg.title+' — Results','Score: '+score+'\nCorrect: '+hits+' / '+total+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores()[s.cfg.key]||0))+'\n\nPress MENU to go back.');
+  const res=textScreen(s.cfg.title+' — Results','Score: '+score+'\nCorrect: '+hits+' / '+total+(s.cfg.rank?'\n'+s.cfg.rank(score,total):'')+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores()[s.cfg.key]||0))+'\n\nPress MENU to go back.');
   res.noCtx=true;
   const i=stack.indexOf(s); if(i>=0){stack[i]=res;if(scr()===res)render()}
 }
@@ -1570,11 +1571,11 @@ function revealHtml(t,ok,pts,cover){
 }
 
 /* —— Guess the Song / Name the Artist (audio clips) —— */
-function makeSongQuiz(pool,mode){
+function makeSongQuiz(pool,mode,extra){
   const field=mode==='artist'?'artist':'title', name=mode==='artist'?'Name the Artist':'Guess the Song';
   if(new Set(pool.map(t=>norm(t[field]))).size<4) return textScreen(name,'Not enough different '+(mode==='artist'?'artists':'songs')+' in this source.\n\nTry a genre or decade.');
-  return makeQuizScreen({key:mode==='artist'?'artist':'song',title:name,rounds:Math.min(10,pool.length),pool,gen:songRound,mode,
-    points:(s,el)=>Math.max(20,100-Math.floor(el)*4-s.replays*15)});
+  return makeQuizScreen(Object.assign({key:mode==='artist'?'artist':'song',title:name,rounds:Math.min(10,pool.length),pool,gen:songRound,mode,
+    points:(s,el)=>Math.max(20,100-Math.floor(el)*4-s.replays*15)},extra||{}));
 }
 function quizPlay(q,t,st,L){
   q.usedAudio=true; quizMode=true; queue=[{...t}]; qi=0; failCount=0; startOverride=st;
@@ -1586,10 +1587,10 @@ function quizPlay(q,t,st,L){
   clearTimeout(q._fb); q._fb=setTimeout(()=>{if(!q.t0)q.t0=Date.now()},9000);
   playTrack(0);
 }
-async function songRound(s){
-  const cfg=s.cfg, field=cfg.mode==='artist'?'artist':'title';
+async function songRound(s,qq,cfg){
+  cfg=cfg||s.cfg; qq=qq||s.q; const field=cfg.mode==='artist'?'artist':'title';
   for(let tries=0;tries<5;tries++){
-    const t=s.q.shift(); if(!t) return null;
+    const t=qq.shift(); if(!t) return null;
     let vid=null; try{vid=await findVideoId(t)}catch{}
     if(!vid) continue;
     const others=dedupeBy(cfg.pool.filter(x=>norm(x[field])!==norm(t[field])),x=>norm(x[field]));
@@ -1598,7 +1599,7 @@ async function songRound(s){
     const L=CLIPS[prefs.qd], dur=t.duration||0;
     const st=dur>60?Math.floor(clamp(dur*(.2+Math.random()*.35),12,Math.max(12,dur-35))):40;
     return {
-      limit:L+18, t,
+      limit:L+18, t, pts:(q,el)=>Math.max(20,100-Math.floor(el)*4-q.replays*15),
       topHtml:'<div class="qz-t1">🎧 Listening…</div><div class="qz-t2" id="qz-clue">'+(cfg.mode==='artist'?'Who sings this?':'Which song is this?')+'</div><div class="qz-t3">⏮ replays the clip (−15 pts) · clues appear over time</div>',
       opts:names.map(n=>({label:n,correct:n===t[field]})),
       onStart:q=>{q.t0=0;quizPlay(q,t,st,L)},
@@ -1620,22 +1621,22 @@ async function songRound(s){
 }
 
 /* —— Cover Blur —— */
-function makeCoverQuiz(pool){
+function makeCoverQuiz(pool,extra){
   const p=dedupeBy(pool.filter(t=>t.albumId&&t.album),t=>t.albumId);
   if(new Set(p.map(t=>norm(t.album))).size<4) return textScreen('Cover Blur','Not enough different albums in this source.\n\nTry a genre or decade.');
-  return makeQuizScreen({key:'cover',title:'Cover Blur',rounds:Math.min(10,p.length),pool:p,gen:coverRound,
-    points:s=>Math.max(20,Math.round(100-quizElapsed(s)*90/s.limit))});
+  return makeQuizScreen(Object.assign({key:'cover',title:'Cover Blur',rounds:Math.min(10,p.length),pool:p,gen:coverRound,
+    points:s=>Math.max(20,Math.round(100-quizElapsed(s)*90/s.limit))},extra||{}));
 }
-async function coverRound(s){
-  const D=BLURS[prefs.qd];
+async function coverRound(s,qq,cfg){
+  cfg=cfg||s.cfg; qq=qq||s.q; const D=BLURS[prefs.qd];
   for(let tries=0;tries<6;tries++){
-    const t=s.q.shift(); if(!t) return null;
+    const t=qq.shift(); if(!t) return null;
     const u=await storeCover(t.albumId,t.artistId).catch(()=>null); if(!u) continue;
-    const others=dedupeBy(s.cfg.pool.filter(x=>norm(x.album)!==norm(t.album)),x=>norm(x.album));
+    const others=dedupeBy(cfg.pool.filter(x=>norm(x.album)!==norm(t.album)),x=>norm(x.album));
     if(others.length<3) return null;
     const names=shuffleArr([t.album,...shuffleArr(others).slice(0,3).map(x=>x.album)]);
     return {
-      limit:D+4,
+      limit:D+4, pts:q=>Math.max(20,Math.round(100-quizElapsed(q)*90/q.limit)),
       topHtml:'<div class="qz-row"><div class="qz-cv" id="qz-cv" data-bg="'+esc(u)+'" style="filter:blur(18px)"></div><div><div class="qz-t1">Name the album</div><div class="qz-t3">The cover sharpens — answer fast for more points</div></div></div>',
       opts:names.map(n=>({label:n,correct:n===t.album})),
       onStart:q=>{q.t0=Date.now();const cv=$('#qz-cv');if(cv){void cv.offsetWidth;cv.style.transition='filter '+D+'s linear';cv.style.filter='blur(0px)'}},
@@ -1661,11 +1662,15 @@ async function startFirstGame(){
     await sleep(150);
   }
   const i=stack.indexOf(ph); if(i<0) return;
-  const g=data.length?makeQuizScreen({key:'first',title:'Which Came First?',rounds:10,pool:[],data,gen:firstRound,points:(s,el)=>Math.max(20,100-Math.floor(el)*6)}):textScreen('Which Came First?','Could not load albums right now.\n\nTry again in a moment.');
+  const g=data.length?makeFirstQuiz(data):textScreen('Which Came First?','Could not load albums right now.\n\nTry again in a moment.');
   stack[i]=g; if(scr()===g) render();
 }
-async function firstRound(s){
-  const groups=s.cfg.data; s._used=s._used||new Set();
+function makeFirstQuiz(data,extra){
+  const pairs=data.reduce((n,g)=>{const al=g.albums;let c=0;for(let i=0;i<al.length;i++)for(let j=i+1;j<al.length;j++)if(al[i].year!==al[j].year)c++;return n+c},0);
+  return makeQuizScreen(Object.assign({key:'first',title:'Which Came First?',rounds:Math.min(10,pairs),pool:[],data,gen:firstRound,points:(s,el)=>Math.max(20,100-Math.floor(el)*6)},extra||{}));
+}
+async function firstRound(s,data){
+  const groups=data||s.cfg.data; s._used=s._used||new Set();
   for(let tries=0;tries<14;tries++){
     const grp=groups[Math.floor(Math.random()*groups.length)], al=shuffleArr(grp.albums), A=al[0], B=al.find(x=>x.year!==A.year&&x.id!==A.id);
     if(!B) continue;
@@ -1676,7 +1681,7 @@ async function firstRound(s){
     const first=A.year<B.year?A:B;
     const two=(yrs)=>'<div class="qz-two"><div><div class="qz-cv"'+(ca?' data-bg="'+esc(ca)+'"':'')+'></div><div class="qz-cap">A'+(yrs?' · '+A.year:'')+'</div></div><div><div class="qz-cv"'+(cb?' data-bg="'+esc(cb)+'"':'')+'></div><div class="qz-cap">B'+(yrs?' · '+B.year:'')+'</div></div></div>';
     return {
-      limit:16,
+      limit:16, pts:(q,el)=>Math.max(20,100-Math.floor(el)*6),
       topHtml:'<div class="qz-t1" style="text-align:center">Which came out first?</div>'+two(false),
       opts:[A,B].map((x,i)=>({label:(i?'B':'A')+' · '+x.title,correct:x===first})),
       reveal:ok=>'<div class="qz-t1" style="text-align:center">'+(ok?'Correct!':'Not quite')+' — '+esc(first.title)+' came first</div>'+two(true)
@@ -1691,10 +1696,10 @@ function hangWord(title){
   const w=title.replace(/\s*[\(\[].*?[\)\]]/g,'').replace(/\s+-\s+.*$/,'').trim().toUpperCase();
   return (/^[A-Z0-9 '!?.,&-]{3,24}$/.test(w)&&(w.match(/[A-Z]/g)||[]).length>=3)?w:null;
 }
-function makeHangman(pool){
+function makeHangman(pool,extra){
   const words=dedupeBy(pool.map(t=>({t,w:hangWord(t.title)})).filter(x=>x.w),x=>x.w);
   if(words.length<2) return textScreen('Song Hangman','Not enough usable song titles in this source.\n\nTry a genre or decade.');
-  const s={type:'hang',title:'Song Hangman',words:shuffleArr(words).slice(0,5),i:0,score:0,hits:0,noCtx:true};
+  const s={type:'hang',title:'Song Hangman',key:(extra&&extra.key)||'hang',words:shuffleArr(words).slice(0,5),i:0,score:0,hits:0,noCtx:true};
   s.onLeave=()=>clearTimeout(s._nt);
   hangInit(s); return s;
 }
@@ -1732,19 +1737,19 @@ function hangEnd(s,win){
   },2200);
 }
 function hangFinish(s){
-  const hi=saveScore('hang',s.score);
-  const res=textScreen('Hangman — Results','Score: '+s.score+'\nSolved: '+s.hits+' / '+s.words.length+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores().hang||0))+'\n\nPress MENU to go back.');
+  const hi=saveScore(s.key,s.score);
+  const res=textScreen('Hangman — Results','Score: '+s.score+'\nSolved: '+s.hits+' / '+s.words.length+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores()[s.key]||0))+'\n\nPress MENU to go back.');
   res.noCtx=true; const i=stack.indexOf(s); if(i>=0){stack[i]=res;if(scr()===res)render()}
 }
 
 /* —— Cover Match (memory) —— */
-async function makeMatch(pool){
+async function makeMatch(pool,extra){
   const albums=dedupeBy(pool.filter(t=>t.albumId&&t.album),t=>t.albumId).slice(0,12);
   if(albums.length<6) return textScreen('Cover Match','Need at least 6 different albums in this source.\n\nTry a genre or decade.');
   const arts=await Promise.all(albums.map(async t=>({t,u:await storeCover(t.albumId,t.artistId).catch(()=>null)})));
   const chosen=[...arts.filter(x=>x.u),...arts.filter(x=>!x.u)].slice(0,6);
   const cards=shuffleArr(chosen.flatMap((x,i)=>[{pair:i,u:x.u,label:x.t.album},{pair:i,u:x.u,label:x.t.album}]));
-  const s={type:'memory',title:'Cover Match',cards,ci:0,first:null,lock:false,moves:0,matched:0,t0:Date.now(),noCtx:true};
+  const s={type:'memory',title:'Cover Match',key:(extra&&extra.key)||'match',cards,ci:0,first:null,lock:false,moves:0,matched:0,t0:Date.now(),noCtx:true};
   s.onLeave=()=>clearTimeout(s._nt);
   return s;
 }
@@ -1771,14 +1776,145 @@ function memSelect(s){
     f.done=c.done=true; f.up=c.up=false; s.matched++; s.first=null;
     renderMemory(s,$('#viewport'));
     if(s.matched===6){
-      const sec=Math.round((Date.now()-s.t0)/1000), score=Math.max(50,700-s.moves*20-sec*3), hi=saveScore('match',score);
-      const res=textScreen('Cover Match — Results','Solved in '+s.moves+' moves ('+sec+' sec)\nScore: '+score+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores().match||0))+'\n\nPress MENU to go back.');
+      const sec=Math.round((Date.now()-s.t0)/1000), score=Math.max(50,700-s.moves*20-sec*3), hi=saveScore(s.key,score);
+      const res=textScreen('Cover Match — Results','Solved in '+s.moves+' moves ('+sec+' sec)\nScore: '+score+(hi?'\n\n🏆 New high score!':'\nBest: '+(getScores()[s.key]||0))+'\n\nPress MENU to go back.');
       res.noCtx=true; s._nt=setTimeout(()=>{const i=stack.indexOf(s);if(i>=0){stack[i]=res;if(scr()===res)render()}},1000);
     }
   }else{
     s.lock=true; renderMemory(s,$('#viewport'));
     s._nt=setTimeout(()=>{f.up=false;c.up=false;s.first=null;s.lock=false;if(scr()===s)renderMemory(s,$('#viewport'))},900);
   }
+}
+
+/* ═════════ Artist Games: pick an artist, then quiz yourself on their catalog ═════════ */
+function artistGamePicker(){
+  return listScreen('Artist Games',()=>{
+    const lib=libArtists().filter(a=>a.id).slice(0,10);
+    const cached=Object.entries(jget('ipod_store_ids',{})).map(([name,id])=>({name,id}));
+    const known=dedupeBy([...STORE_KNOWN,...cached],a=>a.id).filter(a=>!lib.some(l=>l.id===a.id)).slice(0,14);
+    return [
+      {label:'Find an Artist…',sub:'Search for anyone',chev:1,onSelect:()=>push(artistFindMenu())},
+      ...lib.map(a=>({label:a.name,sub:'In your library',art:()=>artistPhoto(a),chev:1,onSelect:()=>push(artistGamesMenu(a))})),
+      ...known.map(a=>({label:a.name,sub:'Featured',art:()=>artistPhoto(a),chev:1,onSelect:()=>push(artistGamesMenu(a))}))
+    ];
+  },{rowH:'two',preview:true});
+}
+function artistFindMenu(){
+  const go=a=>push(artistGamesMenu(a));
+  return listScreen('Find an Artist',[
+    {label:'Type with Keyboard',sub:'Use your keyboard',chev:1,onSelect:()=>push({type:'search',title:'Find an Artist',pickCb:go})},
+    {label:'Spell with Wheel',sub:'iPod-style text entry',chev:1,onSelect:()=>{const sp=spellScreen();sp.title='Find an Artist';sp.pickCb=go;push(sp)}}
+  ],{rowH:'two'});
+}
+async function pickSearch(q,cb){
+  const ph={type:'loading',title:'Searching',msg:'"'+q+'"'}; push(ph);
+  let res;
+  try{
+    const d=await mb('artist/?query='+enc(q)+'&limit=10&fmt=json'), list=d.artists||[];
+    res=list.length?listScreen('Choose Artist',list.map(a=>({label:a.name,sub:a.disambiguation||a.type||'',art:()=>artistPhoto(a),chev:1,onSelect:()=>cb({id:a.id,name:a.name})})),{preview:true,rowH:'two'}):textScreen('Find an Artist','No artists found for "'+q+'".');
+  }catch{res=textScreen('Find an Artist','Search failed. Check your connection and try again.')}
+  const i=stack.indexOf(ph); if(i<0) return; stack[i]=res; res.sel=0; if(scr()===res) render();
+}
+const AG_TITLES={fan:'Superfan Challenge',song:'Guess the Song',album:'Which Album?',cover:'Cover Blur',first:'Which Came First?',hang:'Song Hangman',match:'Cover Match'};
+function artistGamesMenu(a){
+  const art=()=>artistPhoto(a);
+  return listScreen(a.name,()=>{
+    const sc=getScores(), b=k=>'Best '+(sc[k+':'+a.id]||0), row=(kind,sub,k)=>({label:AG_TITLES[kind],sub:sub+' · '+b(k||kind),art,chev:1,onSelect:()=>startArtistGame(a,kind)});
+    return [
+      row('fan','10 mixed questions — earn a fan rank'),
+      row('song','Clips from '+a.name,'song'),
+      row('album','Which album is this song on?'),
+      row('cover','Name the album as it sharpens'),
+      row('first','Pick the older album'),
+      row('hang','Spell the song title'),
+      row('match','Match the album covers')
+    ];
+  },{rowH:'two',preview:true});
+}
+const agMem=new Map();
+function artistGameData(a){
+  if(!agMem.has(a.id)) agMem.set(a.id,(async()=>{
+    const [songs,disc]=await Promise.all([topSongsC(a).catch(()=>[]),discography(a).catch(()=>({albums:[],editions:[]}))]);
+    const albums=dedupeBy((disc.albums||[]).filter(g=>g['primary-type']==='Album'&&!(g['secondary-types']||[]).length),g=>norm(g.title));
+    return {songs:dedupeBy(songs.filter(t=>t.title),t=>norm(t.title)),albums};
+  })().catch(e=>{agMem.delete(a.id);throw e}));
+  return agMem.get(a.id);
+}
+const agQMem=new Map();
+// Songs whose album is certain: pulled from real tracklists. A title found on 2+ albums is dropped (the answer would be ambiguous).
+async function albumQuestions(a,albums){
+  if(agQMem.has(a.id)) return agQMem.get(a.id);
+  const out=[], seen=new Map();
+  for(const g of albums.slice(0,6)){
+    const tr=await albumTracks(a,g.id,g.title,'Album',10,0);
+    tr.forEach(t=>{const k=norm(t.title);seen.set(k,(seen.get(k)||0)+1);out.push(t)});
+    await sleep(120);
+  }
+  const uniq=out.filter(t=>seen.get(norm(t.title))===1);
+  agQMem.set(a.id,uniq); return uniq;
+}
+async function startArtistGame(a,kind){
+  const title=AG_TITLES[kind], ph={type:'loading',title,msg:'Loading '+a.name+'…'}; push(ph);
+  let g; try{g=await buildArtistGame(a,kind,title)}catch(e){console.warn(e);g=textScreen(title,'Could not load '+a.name+' right now.\n\nTry again in a moment.')}
+  const i=stack.indexOf(ph); if(i<0) return;
+  g=g||textScreen(title,'Could not start this game.');
+  stack[i]=g; g.sel=g.sel||0; if(scr()===g) render();
+}
+async function buildArtistGame(a,kind,title){
+  const d=await artistGameData(a), albums=d.albums, songs=d.songs;
+  const albumPool=albums.map(g=>({title:g.title,album:g.title,albumId:g.id,artistId:a.id,artist:a.name}));
+  const dated=albums.filter(g=>/^\d{4}/.test(g['first-release-date']||'')).map(g=>({id:g.id,title:g.title,year:+g['first-release-date'].slice(0,4),artistId:a.id,artist:a.name}));
+  const firstData=(dated.length>=2&&new Set(dated.map(x=>x.year)).size>=2)?[{albums:dated}]:null;
+  const few=(what,n)=>textScreen(title,'Not enough '+what+' for '+a.name+' ('+n+' found).\n\nTry another artist.');
+  if(kind==='song') return new Set(songs.map(t=>norm(t.title))).size<4?few('songs',songs.length):makeSongQuiz(songs,'title',{key:'song:'+a.id,title});
+  if(kind==='cover') return albumPool.length<4?few('albums',albumPool.length):makeCoverQuiz(albumPool,{key:'cover:'+a.id,title});
+  if(kind==='first') return firstData?makeFirstQuiz(firstData,{key:'first:'+a.id,title}):few('dated albums',dated.length);
+  if(kind==='hang') return makeHangman(songs,{key:'hang:'+a.id});
+  if(kind==='match') return albumPool.length<6?few('albums',albumPool.length):makeMatch(albumPool,{key:'match:'+a.id});
+  if(kind==='album'){
+    if(albumPool.length<4) return few('albums',albumPool.length);
+    const qs=await albumQuestions(a,albums);
+    return qs.length<4?few('album tracklists',qs.length):makeQuizScreen({key:'album:'+a.id,title,rounds:Math.min(10,qs.length),pool:qs,data:{albums:albums.map(g=>g.title)},gen:albumRound});
+  }
+  return makeSuperfan(a,songs,albumPool,firstData,albums);
+}
+async function albumRound(s,qq,data){
+  qq=qq||s.q; data=data||s.cfg.data;
+  const t=qq.shift(); if(!t) return null;
+  const others=shuffleArr(dedupeBy(data.albums.filter(x=>norm(x)!==norm(t.album)),x=>norm(x))).slice(0,3);
+  if(others.length<3) return null;
+  const names=shuffleArr([t.album,...others]);
+  return {
+    limit:22, pts:(q,el)=>Math.max(20,100-Math.floor(el)*5),
+    topHtml:'<div class="qz-t1">Which album is this song on?</div><div class="qz-t2">“'+esc(t.title)+'”</div><div class="qz-t3">'+esc(t.artist)+'</div>',
+    opts:names.map(n=>({label:n,correct:n===t.album})),
+    onStart:q=>{q.t0=Date.now()},
+    reveal:(ok,pts)=>revealHtml(t,ok,pts)
+  };
+}
+async function makeSuperfan(a,songs,albumPool,firstData,albums){
+  const can={song:new Set(songs.map(t=>norm(t.title))).size>=4,cover:albumPool.length>=4,first:!!firstData,album:false};
+  let qs=[];
+  if(albumPool.length>=4){try{qs=await albumQuestions(a,albums)}catch{} can.album=qs.length>=4}
+  const plan=['song','album','first','cover','song','album','first','cover','song','album'].filter(t=>can[t]).slice(0,10);
+  if(plan.length<4) return textScreen('Superfan Challenge','Not enough catalog data for '+a.name+' to build a challenge.\n\nTry another artist.');
+  const s=makeQuizScreen({key:'fan:'+a.id,title:'Superfan Challenge',rounds:plan.length,pool:[],plan,gen:superRound,
+    rank:(score,total)=>{const f=score/(total*100);return f>=.85?'🌟 Rank: Superfan':f>=.6?'🔥 Rank: Big Fan':f>=.35?'👍 Rank: Fan':'🎧 Rank: Casual Listener'}});
+  s.qs={song:shuffleArr(songs),cover:shuffleArr(albumPool),album:shuffleArr(qs)};
+  s.sf={songs,albumPool,firstData,albumTitles:albums.map(g=>g.title)};
+  return s;
+}
+async function superRound(s){
+  const type=s.cfg.plan[s.round-1], order=[type,...['song','album','first','cover'].filter(x=>x!==type)];
+  for(const ty of order){
+    let r=null;
+    if(ty==='song'&&s.qs.song.length) r=await songRound(s,s.qs.song,{mode:'title',pool:s.sf.songs});
+    else if(ty==='album'&&s.qs.album.length) r=await albumRound(s,s.qs.album,{albums:s.sf.albumTitles});
+    else if(ty==='cover'&&s.qs.cover.length) r=await coverRound(s,s.qs.cover,{pool:s.sf.albumPool});
+    else if(ty==='first'&&s.sf.firstData) r=await firstRound(s,s.sf.firstData);
+    if(r) return r;
+  }
+  return null;
 }
 
 /* ═════════ Hitzstar Store (iTunes-style home, artist and album pages) ═════════ */
@@ -1987,6 +2123,7 @@ function openArtist(a){
     {key:'more',kind:'rows',title:'More',items:[
       {label:'This Is '+a.name,sub:'Hitzstar Mix',chev:1,onSelect:()=>openMix('This Is '+a.name,()=>artistMix(a,'top'))},
       {label:a.name+' Deep Cuts',sub:'Hitzstar Mix · lesser-known tracks',chev:1,onSelect:()=>openMix(a.name+' Deep Cuts',()=>artistMix(a,'deep'))},
+      {label:'Fan Games',sub:'Quizzes about '+a.name+' · Superfan rank',chev:1,onSelect:()=>push(artistGamesMenu(a))},
       {label:'About',sub:'Biography',chev:1,onSelect:()=>openAsync('About',async()=>textScreen(a.name,await artistBio(a)||'No biography available.'),'Loading bio…')}]}
   ]};
   push(s);
