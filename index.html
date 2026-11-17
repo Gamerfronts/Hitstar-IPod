@@ -269,6 +269,10 @@ body{background:radial-gradient(1100px 700px at 50% 28%,#1d2433,#080a0e 72%);dis
 .mm-c{border-radius:.4em;background:linear-gradient(135deg,var(--hl1),var(--hl2)) center/cover;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.9);font-size:1.3em;font-weight:800;transition:transform .2s}
 .mm-c.done{opacity:.4}
 .mm-c.cur{outline:.2em solid var(--fg);outline-offset:.05em;transform:scale(1.05)}
+/* ───────── playlist cover collages ───────── */
+.collage{display:grid!important;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;background-image:none!important;overflow:hidden}
+.collage>i{display:block;background:#222 center/cover}
+.pv-img.empty::after{content:none}
 #yt-shell{position:fixed;top:-3000px;left:-3000px;width:320px;height:180px;opacity:0;pointer-events:none;overflow:hidden;z-index:1}
 #yt-shell iframe{width:100%;height:100%;border:0;display:block}
 #hint{position:fixed;right:22px;bottom:18px;max-width:250px;color:#7e8798;font-size:12px;line-height:1.55}
@@ -726,10 +730,10 @@ function updateSel(){
   updatePreview();
 }
 function setPv(img,it){
-  img.classList.remove('empty'); img.style.backgroundImage='';
+  img.classList.remove('empty','collage'); img.innerHTML=''; img.style.backgroundImage='';
   if(it&&it.bg){img.style.backgroundImage=it.bg}
-  else if(it&&it.url){img.style.backgroundImage='url("'+it.url+'")'}
-  else img.classList.add('empty');
+  else if(it&&it.url){paintCover(img,it.url)}
+  else{img.classList.add('empty');img.style.backgroundImage=brandBg()}
 }
 function updatePreview(){
   const s=scr(); if(!s||s.type!=='list'||!s.preview) return;
@@ -737,12 +741,11 @@ function updatePreview(){
   if(!it){cap.textContent='';setPv(img,null);return}
   cap.textContent=it.label||'';
   const tok=++pvTok; clearTimeout(pvTimer);
-  if(it.bg){setPv(img,{bg:it.bg});return}
   if(it.artUrl){setPv(img,{url:it.artUrl});return}
-  if(it.art){
-    setPv(img,null);
-    pvTimer=setTimeout(async()=>{let u=null;try{u=await it.art()}catch{}if(tok!==pvTok)return;setPv(img,u?{url:u}:null)},220);
-  }else setPv(img,null);
+  setPv(img,it.bg?{bg:it.bg}:null);          // show the illustrated cover right away…
+  if(it.art){                                // …then swap in the real artwork when it arrives
+    pvTimer=setTimeout(async()=>{let u=null;try{u=await it.art()}catch{}if(tok!==pvTok)return;if(u&&(!Array.isArray(u)||u.length))setPv(img,{url:u})},220);
+  }
 }
 function hueOf(t){let h=0;const k=vkey(t);for(let i=0;i<k.length;i++)h=(h*31+k.charCodeAt(i))%360;return h}
 const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
@@ -990,7 +993,7 @@ const MOODS=[
   {key:'chillout',label:'Chill Vibes',c:['#2193b0','#6dd5ed']},{key:'party',label:'Party Starters',c:['#ff512f','#dd2476']},
   {key:'workout',label:'Workout Energy',c:['#f7b733','#fc4a1a']},{key:'sad',label:'Late Night Feels',c:['#485563','#29323c']}];
 const TOP10={label:'Hitzstar Top 10',c:['#1db954','#0a0a0a']};
-const grad=m=>'linear-gradient(135deg,'+m.c[0]+','+m.c[1]+')';
+const grad=m=>mixBg(m);
 const MIXART=()=>nowT?trackArt(nowT):Promise.resolve(null);
 
 function mainMenu(){
@@ -1039,7 +1042,7 @@ function playlistsMenu(){
 
 function discoverMenu(){
   return listScreen('Discover',[
-    {label:'Surprise Me',bg:grad(TOP10),onSelect:surprise},
+    {label:'Surprise Me',bg:mixBg({label:'Surprise',c:['#7873f5','#ff6ec4']},'dice'),onSelect:surprise},
     {label:TOP10.label,bg:grad(TOP10),chev:1,onSelect:()=>openMix(TOP10.label,top10)},
     {label:'Genre Mixes',chev:1,onSelect:()=>push(mixList('Genre Mixes',GENRES))},
     {label:'Decade Mixes',chev:1,onSelect:()=>push(mixList('Decade Mixes',DECADES))},
@@ -1056,7 +1059,7 @@ function discoverMenu(){
 }
 function surprise(){const pool=[...GENRES,...DECADES,...MOODS,TOP10];const m=pool[Math.floor(Math.random()*pool.length)];toast('Shuffling into '+m.label);openMix(m.label,m===TOP10?top10:()=>tagMix(m))}
 function mixList(title,arr){
-  return listScreen(title,arr.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),chev:1,onSelect:()=>openMix(m.label,()=>tagMix(m))})),{preview:true,rowH:'two'});
+  return listScreen(title,arr.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),art:()=>mixCover(m),chev:1,onSelect:()=>openMix(m.label,()=>tagMix(m))})),{preview:true,rowH:'two'});
 }
 function openMix(title,gen){
   openAsync(title,async()=>{const tr=await gen();if(!tr.length)return textScreen(title,'Not enough catalog data to build this mix.');return tracksScreen(title,tr,{mix:true})},'Building mix…');
@@ -2017,7 +2020,7 @@ function blockHtml(b,bi){
     return '<div>'+hdr+(b.loading&&!b.items.length?'<div class="sl"></div><div class="sl s2"></div>':'')+rows+'</div>';
   }
   if(b.kind==='shelf'){
-    const tiles=b.items.map((it,i)=>'<div class="tile" data-f="'+bi+':'+i+'"><div class="tc'+((b.round||it.round)?' round':'')+'"'+(it.bg?' style="background-image:'+it.bg+'"':'')+(it.art?' data-art="'+bi+':'+i+'"':'')+'></div><div class="tl">'+esc(it.label)+'</div>'+(it.sub?'<div class="tsub">'+esc(it.sub)+'</div>':'')+'</div>').join('');
+    const tiles=b.items.map((it,i)=>'<div class="tile" data-f="'+bi+':'+i+'"><div class="tc'+((b.round||it.round)?' round':'')+'"'+(it.bg?' style="background-image:'+it.bg+'"':'')+((it.art||it._u)?' data-art="'+bi+':'+i+'"':'')+'></div><div class="tl">'+esc(it.label)+'</div>'+(it.sub?'<div class="tsub">'+esc(it.sub)+'</div>':'')+'</div>').join('');
     return '<div>'+hdr+'<div class="shelf">'+tiles+(b.loading?'<div class="tile sk"><div class="tc"></div></div>':'')+'</div></div>';
   }
   if(b.kind==='rows')
@@ -2038,9 +2041,9 @@ function renderStore(s,vp,refresh){
   $$('#st [data-bg]').forEach(e=>{e.style.backgroundImage='url("'+e.dataset.bg+'")'});
   $$('#st [data-art]').forEach(e=>{
     const p=e.dataset.art.split(':'), it=s.blocks[+p[0]]&&s.blocks[+p[0]].items[+p[1]]; if(!it) return;
-    const set=u=>{if(u)e.style.backgroundImage='url("'+u+'")'};
+    const set=u=>{if(u)paintCover(e,u)};
     if(it._u) set(it._u);
-    else if(it.art){const key=e.dataset.art;Promise.resolve(it.art()).then(u=>{it._u=u;const el=$('#st [data-art="'+key+'"]');if(el)set(u)}).catch(()=>{})}
+    else if(it.art){const key=e.dataset.art;Promise.resolve(it.art()).then(u=>{it._u=u;const el=$('#st [data-art="'+key+'"]');if(el&&u)paintCover(el,u)}).catch(()=>{})}
   });
   const st=$('#st'); if(refresh&&st) st.scrollTop=keepTop;
   applyStoreFocus(s,!!refresh);
@@ -2049,6 +2052,7 @@ function refreshStore(s){if(scr()===s) renderStore(s,$('#viewport'),true)}
 function applyStoreFocus(s,noScroll){
   const els=s._els; if(!els||!els.length) return;
   els.forEach((e,i)=>e.classList.toggle('foc',i===s.fi));
+  {const ff=s._flat&&s._flat[s.fi],fit=ff&&s.blocks[ff.b].items[ff.i];if(fit&&fit.onFocus&&!fit._fo){fit._fo=1;try{fit.onFocus(fit)}catch{}}}
   if(noScroll) return;
   const el=els[s.fi], f=s._flat[s.fi], cont=$('#st'); if(!cont||!el) return;
   const cr=cont.getBoundingClientRect();
@@ -2069,20 +2073,20 @@ function openStore(){
     {key:'hero',kind:'banner',title:'Hitzstar Store',sub:'Featured'},
     {key:'act',kind:'actions',items:[{label:'🔍 Search',onSelect:()=>push(searchMenu())},{label:'♪ Top Songs',onSelect:()=>openMix(TOP10.label,top10)}]},
     {key:'browse',kind:'shelf',title:'Browse',items:[
-      {label:'Search',sub:'Find music',bg:gradOf('#5ea3f2','#1a62c9'),onSelect:()=>push(searchMenu())},
-      {label:'Top Songs',sub:'Hitzstar Top 10',bg:grad(TOP10),onSelect:()=>openMix(TOP10.label,top10)},
-      {label:'Genres',sub:'10 mixes',bg:gradOf('#ff6ec4','#7873f5'),onSelect:()=>push(mixList('Genres',GENRES))},
-      {label:'Decades',sub:'80s – 2020s',bg:gradOf('#f2994a','#f2c94c'),onSelect:()=>push(mixList('Decades',DECADES))},
-      {label:'Moods',sub:'Chill to party',bg:gradOf('#43cea2','#185a9d'),onSelect:()=>push(mixList('Moods',MOODS))},
-      {label:'My Library',sub:'Your music',bg:gradOf('#555','#111'),onSelect:()=>push(musicMenu())}]},
+      {label:'Search',sub:'Find music',bg:iconBg('search','#5ea3f2','#1a62c9'),onSelect:()=>push(searchMenu())},
+      {label:'Top Songs',sub:'Hitzstar Top 10',bg:iconBg('songs','#1db954','#0a3d1d'),onSelect:()=>openMix(TOP10.label,top10)},
+      {label:'Genres',sub:'10 mixes',bg:iconBg('genres','#ff6ec4','#7873f5'),onSelect:()=>push(mixList('Genres',GENRES))},
+      {label:'Decades',sub:'80s – 2020s',bg:iconBg('decades','#f2994a','#f2c94c'),onSelect:()=>push(mixList('Decades',DECADES))},
+      {label:'Moods',sub:'Chill to party',bg:iconBg('moods','#43cea2','#185a9d'),onSelect:()=>push(mixList('Moods',MOODS))},
+      {label:'My Library',sub:'Your music',bg:iconBg('library','#666','#111'),onSelect:()=>push(musicMenu())}]},
     {key:'new',kind:'shelf',title:'New & Noteworthy',items:[],loading:true},
     {key:'top',kind:'songs',title:'Top Songs',items:[],loading:true,_all:[]},
     {key:'pl',kind:'shelf',title:'Hot Playlists',items:[
-      {label:TOP10.label,sub:'Hitzstar Mix',bg:grad(TOP10),onSelect:()=>openMix(TOP10.label,top10)},
-      ...MOODS.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onSelect:()=>openMix(m.label,()=>tagMix(m))})),
-      ...DECADES.slice(0,3).map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))]},
+      {label:TOP10.label,sub:'Hitzstar Mix',bg:grad(TOP10),onFocus:mixFocus(TOP10),onSelect:()=>openMix(TOP10.label,top10)},
+      ...MOODS.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onFocus:mixFocus(m),onSelect:()=>openMix(m.label,()=>tagMix(m))})),
+      ...DECADES.slice(0,3).map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onFocus:mixFocus(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))]},
     {key:'like',kind:'shelf',title:'You Might Like',round:true,items:[],loading:true},
-    {key:'genres',kind:'shelf',title:'Genres',items:GENRES.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))}
+    {key:'genres',kind:'shelf',title:'Genres',items:GENRES.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onFocus:mixFocus(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))}
   ]};
   push(s); storeFill(s);
 }
@@ -2321,9 +2325,9 @@ async function yearSongs(a,y){
 }
 // Builds a mix from the curated lists. Walks the (year, artist) pairs in random order until there are enough songs,
 // so a pairing with no matching songs just contributes nothing and the next one fills in.
-async function yearMix(years){
+async function yearMix(years,wantN){
   const entries=shuffleArr(years.flatMap(y=>(YEAR_ARTISTS[y]||[]).map(nm=>({y,nm}))));
-  const out=[], seen=new Set(), want=years.length===1?22:24;
+  const out=[], seen=new Set(), want=wantN||(years.length===1?22:24);
   for(let i=0;i<entries.length&&out.length<want;i+=3){
     const res=await Promise.all(entries.slice(i,i+3).map(async e=>{
       try{
@@ -2336,6 +2340,131 @@ async function yearMix(years){
   }
   return out.sort((x,y)=>(y._pop||0)-(x._pop||0)).slice(0,25);
 }
+
+/* ═════════ Playlist cover art: illustrated SVG covers generated in code (no images to download) ═════════ */
+const _f=n=>Math.round(n*10)/10;
+const _P=(cx,cy,r,deg)=>{const a=deg*Math.PI/180;return _f(cx+r*Math.cos(a))+','+_f(cy+r*Math.sin(a))};
+const _star=(cx,cy,R,r,n,rot=-90)=>{const p=[];for(let i=0;i<n*2;i++)p.push(_P(cx,cy,i%2?r:R,rot+i*180/n));return p.join(' ')};
+const _sparkle=(cx,cy,r)=>'M'+cx+' '+(cy-r)+'Q'+cx+' '+cy+' '+(cx+r)+' '+cy+'Q'+cx+' '+cy+' '+cx+' '+(cy+r)+'Q'+cx+' '+cy+' '+(cx-r)+' '+cy+'Q'+cx+' '+cy+' '+cx+' '+(cy-r)+'Z';
+const _heart=(cx,cy,s)=>'M'+cx+' '+(cy+.9*s)+'C'+(cx-1.6*s)+' '+(cy-.1*s)+' '+(cx-.9*s)+' '+(cy-1.1*s)+' '+cx+' '+(cy-.4*s)+'C'+(cx+.9*s)+' '+(cy-1.1*s)+' '+(cx+1.6*s)+' '+(cy-.1*s)+' '+cx+' '+(cy+.9*s)+'Z';
+const _rays=(cx,cy,R,n,w,op1,op2,fill)=>{let s='';for(let i=0;i<n;i++){const t=i*360/n;s+='<polygon points="'+cx+','+cy+' '+_P(cx,cy,R,t-w)+' '+_P(cx,cy,R,t+w)+'" fill="'+fill+'" fill-opacity="'+(i%2?op1:op2)+'"/>'}return s};
+const _rnd=i=>{const x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)};   // deterministic "random" so each cover always looks the same
+const _crescent=(cx,cy,r,fill,id)=>'<mask id="'+id+'"><rect width="200" height="200" fill="#fff"/><circle cx="'+(cx+r*.45)+'" cy="'+(cy-r*.2)+'" r="'+(r*.85)+'" fill="#000"/></mask><circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'" mask="url(#'+id+')"/>';
+
+const MIX_MOTIF={
+  pop:()=>_rays(100,84,150,18,4.5,.12,.22,'#fff')+'<polygon points="'+_star(100,84,40,17,5)+'" fill="url(#gold)" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'+[[52,50,9],[150,58,7],[144,118,10],[58,112,6]].map(a=>'<path d="'+_sparkle(...a)+'" fill="#fff"/>').join(''),
+  hiphop:a=>{let s='<circle cx="100" cy="90" r="62" fill="#0c0c0f"/>';[54,46,38,30].forEach(r=>s+='<circle cx="100" cy="90" r="'+r+'" fill="none" stroke="#fff" stroke-opacity=".13"/>');
+    s+='<circle cx="100" cy="90" r="17" fill="'+a+'"/><circle cx="100" cy="90" r="3" fill="#0c0c0f"/>';
+    return s+'<g transform="rotate(-8 100 82)"><path d="M62 100L68 62L87 84L100 54L113 84L132 62L138 100Z" fill="url(#gold)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><rect x="62" y="102" width="76" height="11" rx="3" fill="url(#gold)" stroke="#fff" stroke-width="2"/><circle cx="68" cy="60" r="4" fill="#fff"/><circle cx="100" cy="52" r="4.5" fill="#fff"/><circle cx="132" cy="60" r="4" fill="#fff"/></g>'},
+  edm:()=>{const hs=[34,58,84,52,100,72,106,64,88,44,28];let s='<circle cx="100" cy="92" r="64" fill="#fff" fill-opacity=".13"/>';
+    hs.forEach((h,i)=>{const x=22+i*15.2;s+='<rect x="'+x+'" y="'+(134-h)+'" width="10.5" height="'+h+'" rx="3" fill="#fff" fill-opacity=".82"/><rect x="'+x+'" y="'+(134-h)+'" width="10.5" height="7" rx="3" fill="#b9f6ff"/>'});
+    return s+'<path d="M18 140H182" stroke="#fff" stroke-opacity=".55" stroke-width="2.5"/>'},
+  rnb:()=>{let s='';[70,56,42].forEach((r,i)=>s+='<circle cx="100" cy="88" r="'+r+'" fill="none" stroke="#fff" stroke-opacity="'+(.2-i*.05)+'" stroke-width="2"/>');
+    return s+'<path d="M100 130C32 88 52 34 100 66C148 34 168 88 100 130Z" fill="#fff"/><path d="M100 118C48 86 62 48 100 70C138 48 152 86 100 118Z" fill="url(#g)"/><path d="M24 98Q36 78 48 98T72 98" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/><path d="M128 98Q140 78 152 98T176 98" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>'},
+  rock:()=>_rays(100,88,160,14,6,.07,.17,'#000')+'<polygon points="114,24 62,92 96,92 84,148 142,70 106,70" fill="#fff" stroke="#ffd54a" stroke-width="4" stroke-linejoin="round"/><path d="'+_sparkle(48,52,8)+'" fill="#fff"/><path d="'+_sparkle(158,128,9)+'" fill="#fff"/>',
+  country:()=>{let s='<circle cx="100" cy="80" r="44" fill="#fff" fill-opacity=".2"/><circle cx="100" cy="80" r="30" fill="#fff6c8"/><path d="M0 128Q42 96 92 122T200 108V200H0Z" fill="#000" fill-opacity=".2"/><path d="M0 144Q60 114 120 138T200 126V200H0Z" fill="#000" fill-opacity=".26"/><path d="M-10 154L210 128" stroke="#fff" stroke-opacity=".6" stroke-width="3"/><path d="M-10 164L210 138" stroke="#fff" stroke-opacity=".4" stroke-width="2"/>';
+    for(let x=20;x<=190;x+=28)s+='<rect x="'+x+'" y="'+_f(150-x*.12)+'" width="5" height="22" rx="1.5" fill="#fff" fill-opacity=".62"/>';return s},
+  latin:()=>{let s='<path d="M0 34Q100 62 200 34" fill="none" stroke="#fff" stroke-width="2"/>';const cols=['#ffd54a','#ff4d6d','#ffffff','#2ec4b6','#ff9f1c','#ffd54a','#ff4d6d','#ffffff'];
+    cols.forEach((c,i)=>{const x=14+i*24,t=x/200,y=34+56*t*(1-t);s+='<polygon points="'+(x-9)+','+_f(y)+' '+(x+9)+','+_f(y)+' '+x+','+_f(y+22)+'" fill="'+c+'"/>'});
+    s+='<path d="M52 126A48 48 0 0 1 148 126Z" fill="url(#gold)"/><path d="M64 126A36 36 0 0 1 136 126" fill="none" stroke="#ff7a00" stroke-opacity=".35" stroke-width="3"/>';
+    s+='<path d="M0 126q12-9 25 0t25 0t25 0t25 0t25 0t25 0t25 0t25 0V200H0Z" fill="#fff" fill-opacity=".2"/>';return s},
+  kpop:()=>'<path d="'+_sparkle(100,84,56)+'" fill="#fff"/><path d="'+_sparkle(100,84,36)+'" fill="url(#g)" fill-opacity=".6"/>'+[[40,54,9],[162,50,7],[158,120,11],[46,116,8]].map(a=>'<path d="'+_heart(...a)+'" fill="#fff" fill-opacity=".92"/>').join('')+[[24,88,6],[178,86,5],[100,22,4]].map(a=>'<polygon points="'+_star(a[0],a[1],a[2],a[2]*.45,5)+'" fill="#fff"/>').join(''),
+  indie:()=>{let s='<circle cx="140" cy="62" r="17" fill="#fff6d6"/>';for(let i=0;i<14;i++)s+='<circle cx="'+_f(10+_rnd(i)*180)+'" cy="'+_f(26+_rnd(i+40)*60)+'" r="'+_f(.8+_rnd(i+9)*1.2)+'" fill="#fff" fill-opacity=".8"/>';
+    s+='<path d="M-10 142L50 76L92 120L124 90L210 152V200H-10Z" fill="#000" fill-opacity=".26"/><path d="M-10 152L36 106L70 138L112 98L160 142L210 122V200H-10Z" fill="#000" fill-opacity=".34"/>';
+    [[30,150],[48,158],[150,150],[170,142]].forEach(p=>s+='<polygon points="'+p[0]+','+(p[1]-26)+' '+(p[0]-9)+','+p[1]+' '+(p[0]+9)+','+p[1]+'" fill="#000" fill-opacity=".45"/>');return s},
+  jazz:()=>{let s='<g>'+_crescent(100,82,46,'#ffe9a8','mj')+'</g>';[[40,40,2],[168,52,2.4],[156,112,1.8],[30,108,1.6]].forEach(a=>s+='<circle cx="'+a[0]+'" cy="'+a[1]+'" r="'+a[2]+'" fill="#fff"/>');
+    const note=(x,y)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="9" ry="6.5" transform="rotate(-20 '+x+' '+y+')" fill="#fff"/><rect x="'+(x+6)+'" y="'+(y-46)+'" width="3.2" height="46" fill="#fff"/><path d="M'+(x+9)+' '+(y-46)+'q20 6 16 26q-4-12-16-14z" fill="#fff"/>';
+    return s+note(56,132)+note(138,124)},
+  d80:()=>{let s='<defs><linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff2e93"/></linearGradient><mask id="sm"><rect width="200" height="200" fill="#fff"/><rect y="92" width="200" height="2.5"/><rect y="102" width="200" height="4"/><rect y="113" width="200" height="5.5"/><rect y="124" width="200" height="8"/></mask></defs><circle cx="100" cy="94" r="46" fill="url(#sun)" mask="url(#sm)"/><rect y="132" width="200" height="70" fill="#14052e" fill-opacity=".72"/>';
+    for(let i=-9;i<=9;i++)s+='<line x1="100" y1="132" x2="'+(100+i*34)+'" y2="200" stroke="#ff5fd2" stroke-opacity=".85" stroke-width="1.4"/>';
+    [140,150,163,180].forEach(y=>s+='<line x1="0" y1="'+y+'" x2="200" y2="'+y+'" stroke="#ff5fd2" stroke-opacity=".85" stroke-width="1.4"/>');return s},
+  d90:()=>'<polygon points="40,44 74,44 57,76" fill="none" stroke="#ffe14d" stroke-width="5" stroke-linejoin="round"/><circle cx="150" cy="58" r="18" fill="none" stroke="#2ee6d6" stroke-width="6"/><path d="M28 104l14-14l14 14l14-14l14 14l14-14" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M110 112q12-26 24 0t24 0" fill="none" stroke="#ff5fa2" stroke-width="6" stroke-linecap="round"/><rect x="92" y="30" width="22" height="22" fill="#ff5fa2" transform="rotate(18 103 41)"/>'+[0,1,2,3,4].map(i=>[0,1,2].map(j=>'<circle cx="'+(130+i*10)+'" cy="'+(138+j*0)+'" r="2.6" fill="#ffe14d"/>').join('')).join('')+'<polygon points="30,128 56,128 43,150" fill="#2ee6d6"/>',
+  d00:()=>'<defs><linearGradient id="ch" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#9fd8ff"/><stop offset=".6" stop-color="#fff"/><stop offset="1" stop-color="#7fb6ff"/></linearGradient></defs><circle cx="100" cy="84" r="58" fill="none" stroke="url(#ch)" stroke-width="11"/><circle cx="100" cy="84" r="42" fill="#fff" fill-opacity=".16"/><polygon points="'+_star(100,84,36,12,8)+'" fill="url(#ch)" stroke="#fff" stroke-width="1.5"/>'+[[40,48,8],[160,44,6],[150,126,10],[48,126,6]].map(a=>'<circle cx="'+a[0]+'" cy="'+a[1]+'" r="'+a[2]+'" fill="#fff" fill-opacity=".35" stroke="#fff" stroke-width="2"/>').join(''),
+  d10:()=>{let s='';for(let r=0;r<4;r++)for(let c=0;c<7;c++){const x=14+c*25.4,y=30+r*27,o=(a)=>_f(.05+_rnd(r*9+c*3+a)*.3);
+      s+='<polygon points="'+x+','+y+' '+(x+25.4)+','+y+' '+x+','+(y+27)+'" fill="#fff" fill-opacity="'+o(1)+'"/><polygon points="'+(x+25.4)+','+y+' '+(x+25.4)+','+(y+27)+' '+x+','+(y+27)+'" fill="#fff" fill-opacity="'+o(2)+'"/>'}
+    return s+'<circle cx="100" cy="82" r="30" fill="#fff" fill-opacity=".92"/><polygon points="92,68 92,96 116,82" fill="url(#g)"/>'},
+  d20:()=>'<defs><filter id="gl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5"/></filter></defs>'+[56,42,28,14].map((r,i)=>{const c=['#00f0ff','#ff2bd6','#00f0ff','#ffffff'][i];return '<circle cx="100" cy="84" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="5" filter="url(#gl)"/><circle cx="100" cy="84" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="2.4"/>'}).join('')+[0,1,2,3,4,5,6,7].map(i=>'<line x1="100" y1="84" x2="'+_P(100,84,70,i*45+22).split(',')[0]+'" y2="'+_P(100,84,70,i*45+22).split(',')[1]+'" stroke="#fff" stroke-opacity=".18"/>').join(''),
+  chill:()=>'<g>'+_crescent(142,52,20,'#fff6d6','mc')+'</g>'+[0,1,2].map(i=>'<path d="M-10 '+(92+i*18)+'q22-16 44 0t44 0t44 0t44 0t44 0V200H-10Z" fill="#fff" fill-opacity="'+(.16+i*.08)+'"/>').join('')+[[30,36],[70,52],[118,30],[168,84]].map(p=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="1.8" fill="#fff"/>').join(''),
+  party:()=>{let s='<line x1="100" y1="20" x2="100" y2="40" stroke="#fff" stroke-width="2"/><circle cx="100" cy="76" r="38" fill="url(#gold)" stroke="#fff" stroke-width="2"/>';
+    [-24,-8,8,24].forEach(x=>s+='<path d="M'+(100+x)+' '+_f(76-Math.sqrt(1444-x*x))+'Q'+(100+x*1.3)+' 76 '+(100+x)+' '+_f(76+Math.sqrt(1444-x*x))+'" fill="none" stroke="#b36b00" stroke-opacity=".4"/>');
+    [-24,-8,8,24].forEach(y=>s+='<path d="M'+_f(100-Math.sqrt(1444-y*y))+' '+(76+y)+'H'+_f(100+Math.sqrt(1444-y*y))+'" stroke="#b36b00" stroke-opacity=".4"/>');
+    const cols=['#ff5fa2','#2ee6d6','#ffe14d','#fff','#7a5cff'];for(let i=0;i<26;i++)s+='<rect x="'+_f(12+_rnd(i)*176)+'" y="'+_f(26+_rnd(i+30)*112)+'" width="5" height="9" rx="1" fill="'+cols[i%5]+'" transform="rotate('+Math.floor(_rnd(i+7)*180)+' '+_f(12+_rnd(i)*176)+' '+_f(26+_rnd(i+30)*112)+')"/>';
+    return s+'<path d="'+_sparkle(150,50,8)+'" fill="#fff"/><path d="'+_sparkle(48,60,6)+'" fill="#fff"/>'},
+  workout:()=>'<g transform="rotate(-24 100 86)"><rect x="40" y="82" width="120" height="9" rx="4" fill="#e9ecf5"/><rect x="40" y="64" width="12" height="46" rx="4" fill="#fff"/><rect x="54" y="70" width="10" height="34" rx="3" fill="#dfe3f0"/><rect x="148" y="64" width="12" height="46" rx="4" fill="#fff"/><rect x="136" y="70" width="10" height="34" rx="3" fill="#dfe3f0"/></g><polygon points="150,28 128,58 142,58 134,84 162,50 147,50" fill="#ffe14d" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>'+_rays(100,92,110,12,5,.05,.13,'#fff'),
+  night:()=>{let s='<g>'+_crescent(70,60,24,'#fff6d6','mn')+'</g>';for(let i=0;i<16;i++)s+='<circle cx="'+_f(8+_rnd(i)*184)+'" cy="'+_f(14+_rnd(i+20)*70)+'" r="'+_f(.7+_rnd(i+3)*1.3)+'" fill="#fff" fill-opacity=".9"/>';
+    const bs=[[10,40,50],[34,28,64],[56,36,56],[80,22,72],[100,34,60],[122,26,68],[146,40,52],[168,30,62]];
+    bs.forEach(b=>{s+='<rect x="'+b[0]+'" y="'+(140-b[2])+'" width="'+(b[1]-4)+'" height="'+b[2]+'" fill="#06061a" fill-opacity=".72"/>';for(let k=0;k<5;k++)if(_rnd(b[0]+k)>.45)s+='<rect x="'+(b[0]+4+(k%2)*8)+'" y="'+(146-b[2]+Math.floor(k/2)*12)+'" width="4" height="5" fill="#ffd54a" fill-opacity=".85"/>'});
+    return s+'<rect y="140" width="200" height="60" fill="#06061a" fill-opacity=".72"/>'},
+  top10:()=>_rays(100,84,150,16,5,.1,.2,'#fff')+'<rect x="34" y="104" width="40" height="34" fill="#fff" fill-opacity=".55"/><rect x="74" y="82" width="52" height="56" fill="#fff" fill-opacity=".9"/><rect x="126" y="114" width="40" height="24" fill="#fff" fill-opacity=".45"/><polygon points="'+_star(100,60,22,9,5)+'" fill="url(#gold)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><text x="100" y="124" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="30" fill="#ff8a00">1</text><text x="54" y="128" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="20" fill="#7a7f95">2</text><text x="146" y="132" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="18" fill="#7a7f95">3</text>',
+  dice:()=>'<g transform="rotate(-14 100 86)"><rect x="52" y="40" width="96" height="96" rx="20" fill="#fff"/>'+[[78,66],[122,66],[100,88],[78,110],[122,110]].map(p=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="8" fill="url(#g)"/>').join('')+'</g>'+'<path d="'+_sparkle(160,40,10)+'" fill="#fff"/><path d="'+_sparkle(38,122,7)+'" fill="#fff"/>'
+};
+// Small white icons for the Store's Browse tiles (no title text; the tile label sits below)
+const ICON_MOTIF={
+  search:()=>'<circle cx="90" cy="88" r="34" fill="none" stroke="#fff" stroke-width="12"/><path d="M116 114L152 150" stroke="#fff" stroke-width="14" stroke-linecap="round"/>',
+  songs:()=>'<rect x="44" y="96" width="30" height="50" rx="6" fill="#fff" fill-opacity=".7"/><rect x="85" y="56" width="30" height="90" rx="6" fill="#fff"/><rect x="126" y="80" width="30" height="66" rx="6" fill="#fff" fill-opacity=".8"/>',
+  genres:()=>'<path d="M82 54L152 40V120" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M82 54V132" stroke="#fff" stroke-width="10"/><ellipse cx="66" cy="136" rx="22" ry="16" fill="#fff"/><ellipse cx="136" cy="122" rx="22" ry="16" fill="#fff"/>',
+  decades:()=>'<circle cx="100" cy="92" r="54" fill="none" stroke="#fff" stroke-width="10"/><path d="M100 56V94L126 108" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>',
+  moods:()=>'<circle cx="100" cy="92" r="54" fill="#fff"/><circle cx="80" cy="80" r="7" fill="url(#g)"/><circle cx="120" cy="80" r="7" fill="url(#g)"/><path d="M72 104Q100 134 128 104" fill="none" stroke="#c0407a" stroke-width="9" stroke-linecap="round"/>',
+  library:()=>'<rect x="46" y="50" width="30" height="96" rx="5" fill="#fff"/><rect x="82" y="64" width="30" height="82" rx="5" fill="#fff" fill-opacity=".85"/><rect x="118" y="44" width="30" height="102" rx="5" fill="#fff" fill-opacity=".7" transform="rotate(8 133 95)"/><path d="M40 152H160" stroke="#fff" stroke-width="7" stroke-linecap="round"/>'
+};
+const MIX_KIND_BY_LABEL={'Pop Weekly':'pop','Hip-Hop Nation':'hiphop','EDM Bangers':'edm','R&B Soul':'rnb','Rock Essentials':'rock','Country Roads':'country','Latin Heat':'latin','K-Pop Rising':'kpop','Indie Waves':'indie','Jazz Lounge':'jazz','80s Throwback':'d80','90s Flashback':'d90','2000s Hits':'d00','2010s Replay':'d10','2020s Now':'d20','Chill Vibes':'chill','Party Starters':'party','Workout Energy':'workout','Late Night Feels':'night','Hitzstar Top 10':'top10'};
+const MIX_WORD={pop:'POP',hiphop:'HIP-HOP',edm:'EDM',rnb:'R&B',rock:'ROCK',country:'COUNTRY',latin:'LATIN',kpop:'K-POP',indie:'INDIE',jazz:'JAZZ',d80:'THE 80s',d90:'THE 90s',d00:'THE 2000s',d10:'THE 2010s',d20:'THE 2020s',chill:'CHILL',party:'PARTY',workout:'WORKOUT',night:'LATE NIGHT',top10:'TOP 10',dice:'SURPRISE'};
+function mixKind(m){
+  if(MIX_KIND_BY_LABEL[m.label]) return MIX_KIND_BY_LABEL[m.label];
+  const y=/^(\d{4}) Hits$/.exec(m.label||''); if(y) return {kind:+y[1]<2010?'d00':'d10',year:y[1]};
+  return 'pop';
+}
+const _xml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function mixSvg(m,kindOverride){
+  const k=kindOverride||mixKind(m), kind=typeof k==='string'?k:k.kind, word=typeof k==='string'?(MIX_WORD[k]||''):k.year;
+  const [c1,c2]=m.c, big=typeof k!=='string', fs=big?42:Math.min(38,Math.floor(166/Math.max(3,word.length*.8)));
+  const defs='<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient><radialGradient id="h" cx=".28" cy=".16" r=".95"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><linearGradient id="v" x1="0" y1="0" x2="0" y2="1"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="1" stop-color="#f5a623"/></linearGradient></defs>';
+  const text=word?'<text x="100" y="'+(big?181:178)+'" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="'+fs+'" letter-spacing="1" fill="#fff" stroke="#000" stroke-opacity=".3" stroke-width="3.4" paint-order="stroke">'+_xml(word)+'</text>':'';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">'+defs+'<rect width="200" height="200" fill="url(#g)"/>'+(MIX_MOTIF[kind]||MIX_MOTIF.pop)(c1,c2,m)+'<rect width="200" height="200" fill="url(#h)"/><rect width="200" height="200" fill="url(#v)"/><text x="12" y="22" font-family="Helvetica,Arial,sans-serif" font-size="10" font-weight="800" letter-spacing="2.5" fill="#fff" fill-opacity=".9">HITZSTAR</text>'+text+'</svg>';
+}
+function iconSvg(kind,c1,c2){
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient><radialGradient id="h" cx=".28" cy=".16" r=".95"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="200" height="200" fill="url(#g)"/>'+ICON_MOTIF[kind]()+'<rect width="200" height="200" fill="url(#h)"/></svg>';
+}
+const svgUrl=s=>"url('data:image/svg+xml,"+encodeURIComponent(s).replace(/'/g,'%27').replace(/\(/g,'%28').replace(/\)/g,'%29')+"')";
+const _bgMemo=new Map();
+function mixBg(m,kindOverride){const k=(kindOverride||'')+'|'+m.label;if(!_bgMemo.has(k))_bgMemo.set(k,svgUrl(mixSvg(m,kindOverride)));return _bgMemo.get(k)}
+function iconBg(kind,c1,c2){const k='i|'+kind+c1+c2;if(!_bgMemo.has(k))_bgMemo.set(k,svgUrl(iconSvg(kind,c1,c2)));return _bgMemo.get(k)}
+function brandSvg(){
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1ed760"/><stop offset="1" stop-color="#0a3d1d"/></linearGradient><radialGradient id="h" cx=".3" cy=".15" r=".95"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="200" height="200" fill="url(#g)"/>'+_rays(100,92,150,16,5,.08,.16,'#fff')+'<polygon points="'+_star(100,88,46,20,5)+'" fill="#fff" fill-opacity=".95"/><rect width="200" height="200" fill="url(#h)"/><text x="100" y="170" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="25" letter-spacing="3" fill="#fff" stroke="#000" stroke-opacity=".25" stroke-width="3" paint-order="stroke">HITZSTAR</text></svg>';
+}
+const brandBg=()=>{if(!_bgMemo.has('brand'))_bgMemo.set('brand',svgUrl(brandSvg()));return _bgMemo.get('brand')};
+
+/* ═════════ Real covers for playlists: a 2×2 collage of the mix's own album art (cached after the first time) ═════════ */
+function paintCover(el,u){
+  el.classList.remove('collage'); el.innerHTML='';
+  if(Array.isArray(u)){
+    if(u.length>=4){
+      el.classList.add('collage'); el.style.backgroundImage='none';
+      u.slice(0,4).forEach(x=>{const i=document.createElement('i');i.style.backgroundImage='url("'+x+'")';el.appendChild(i)});
+      return;
+    }
+    u=u[0];
+  }
+  if(u) el.style.backgroundImage='url("'+u+'")';
+}
+const mixCovMem=new Map();
+function mixCover(m){
+  const ck='ipod_mixcov:'+m.label, c=artGet(ck); if(c!==undefined) return Promise.resolve(c);
+  if(mixCovMem.has(m.label)) return mixCovMem.get(m.label);
+  const p=(async()=>{
+    let tr=[];
+    try{tr=m.label===TOP10.label?await top10():(m.years?await yearMix(m.years,5):await tagMix(m))}catch{}
+    const albums=dedupeBy(tr.filter(t=>t.albumId),t=>t.albumId).slice(0,10);
+    const urls=(await Promise.all(albums.map(async t=>{const u='https://coverartarchive.org/release-group/'+t.albumId+'/front';return (await imgOk(u))?u:null}))).filter(Boolean).slice(0,4);
+    if(urls.length>=4) artSet(ck,urls);
+    return urls.length?urls:null;
+  })();
+  mixCovMem.set(m.label,p);
+  p.then(r=>{if(!r||r.length<4)mixCovMem.delete(m.label)}).catch(()=>mixCovMem.delete(m.label));
+  return p;
+}
+// Store tiles load their collage when you land on them (so we don't fetch every playlist at once)
+const mixFocus=m=>it=>{mixCover(m).then(u=>{if(u&&u.length){it._u=u;const s=scr();if(s&&s.type==='store')refreshStore(s)}}).catch(()=>{})};
 
 /* ═════════ boot ═════════ */
 applyPrefs();
