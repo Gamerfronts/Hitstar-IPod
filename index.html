@@ -493,7 +493,7 @@ function addRecent(t){const r=getRecent().filter(x=>!sameT(x,t));r.unshift(slim(
 function addToPlaylist(name,t){const p=getPls();p[name]=p[name]||[];if(!p[name].some(x=>sameT(x,t)))p[name].push(slim(t));jset('playlists',p);toast('Added to '+name)}
 function libSongs(){const m=new Map();[...getFavs(),...getRecent(),...Object.values(getPls()).flat()].forEach(t=>{if(t&&t.title&&!isHiddenTrack(t)){const k=vkey(t);if(!m.has(k))m.set(k,t)}});return [...m.values()].sort((a,b)=>a.title.localeCompare(b.title))}
 function libArtists(){const m=new Map();libSongs().forEach(t=>{const k=t.artistId||t.artist;if(k&&!m.has(k))m.set(k,{id:t.artistId||null,name:t.artist})});return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name))}
-function libAlbums(){const m=new Map();libSongs().forEach(t=>{if(t.albumId&&!m.has(t.albumId))m.set(t.albumId,{id:t.albumId,title:t.album||'Album',artistId:t.artistId,artist:t.artist,type:t.albumType||'Album'})});return [...m.values()].sort((a,b)=>a.title.localeCompare(b.title))}
+function libAlbums(){const ha=jget('hz_hidden_albums',{});const m=new Map();libSongs().forEach(t=>{if(t.albumId&&!ha[t.albumId]&&!m.has(t.albumId))m.set(t.albumId,{id:t.albumId,title:t.album||'Album',artistId:t.artistId,artist:t.artist,type:t.albumType||'Album'})});return [...m.values()].sort((a,b)=>a.title.localeCompare(b.title))}
 
 /* ═════════ video matching ═════════ */
 const getVO=t=>lsGet('hz_video_override:'+vkey(t));
@@ -932,6 +932,7 @@ function ctxMenu(){
   const s=scr(); if(s&&s.ctx) return;
   if(s&&s.noCtx) return;
   if(s&&s.onLong){tick();s.onLong();return}
+  const alb=ctxAlbum(); if(alb){albumCtxMenu(alb);return}
   const t=ctxTarget(); if(!t){toast('Nothing to show options for');return}
   const isNow=sameT(t,nowT);
   const items=[
@@ -951,6 +952,8 @@ function ctxMenu(){
     isNow&&queue.length>qi+1&&{label:'Clear Up Next',onSelect:()=>{queue=queue.slice(0,qi+1);toast('Up Next cleared');closeCtx();refreshNow()}},
     {label:'Copy Song Info',onSelect:()=>{const txt=t.title+' — '+artistLine(t);try{navigator.clipboard.writeText(txt).then(()=>toast('Copied')).catch(()=>toast(txt))}catch{toast(txt)}closeCtx()}},
     {label:'Fix Video Match…',onSelect:()=>{closeCtx();fixVideo(t)}},
+    getRecent().some(x=>sameT(x,t))&&{label:'Remove from Recently Played',onSelect:()=>{removeRecent(t);closeCtx()}},
+    s&&s.playlist&&{label:'Remove from "'+s.playlist+'"',onSelect:()=>{removeFromPlaylist(s.playlist,t);closeCtx()}},
     {label:isHiddenSong(t)?'Unhide This Song':'Hide This Song',onSelect:()=>{if(isHiddenSong(t))unhideSong(t);else hideSong(t);closeCtx();afterHide();refreshNow();storeAfterHide()}},
     t.artist&&{label:(isHiddenArtist({id:t.artistId,name:t.artist})?'Unhide ':'Hide ')+t.artist,onSelect:()=>{const ar={id:t.artistId,name:t.artist};if(isHiddenArtist(ar))unhideArtist(ar);else hideArtist(ar);closeCtx();afterHide();refreshNow();storeAfterHide()}}
   ];
@@ -988,7 +991,7 @@ const GENRES=[
 const DECADES=[
   {label:'80s Throwback',from:1980,to:1989,c:['#ff0080','#7928ca']},{label:'90s Flashback',from:1990,to:1999,c:['#f857a6','#ff5858']},
   {label:'2000s Hits',from:2000,to:2009,years:[2000,2001,2002,2003,2004,2005,2006,2007,2008,2009],c:['#00c9ff','#0575e6']},{label:'2010s Replay',from:2010,to:2019,years:[2010,2011,2012,2013,2014,2015,2016,2017,2018,2019],c:['#f2994a','#f2c94c']},
-  {label:'2020s Now',from:2020,to:2029,c:['#8e2de2','#4a00e0']}];
+  {label:'2020s Now',from:2020,to:2029,years:[2020,2021,2022,2023,2024,2025,2026],c:['#8e2de2','#4a00e0']}];
 const MOODS=[
   {key:'chillout',label:'Chill Vibes',c:['#2193b0','#6dd5ed']},{key:'party',label:'Party Starters',c:['#ff512f','#dd2476']},
   {key:'workout',label:'Workout Energy',c:['#f7b733','#fc4a1a']},{key:'sad',label:'Late Night Feels',c:['#485563','#29323c']}];
@@ -1003,8 +1006,8 @@ function mainMenu(){
     {label:'Hitzstar Store',chev:1,art:MIXART,onSelect:openStore},
     {label:'Discover',chev:1,art:MIXART,onSelect:()=>push(discoverMenu())},
     {label:'Search',chev:1,art:MIXART,onSelect:()=>push(searchMenu())},
-    {label:'Favorites',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Favorites',getFavs(),{empty:'No favorites yet'}))},
-    {label:'Recently Played',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Recently Played',getRecent(),{empty:'Nothing played yet'}))},
+    {label:'Favorites',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Favorites',()=>getFavs(),{empty:'No favorites yet'}))},
+    {label:'Recently Played',chev:1,art:MIXART,onSelect:()=>push(tracksScreen('Recently Played',()=>getRecent(),{empty:'Nothing played yet',recent:true,head:vis=>vis.length?[{label:'Clear Recently Played',sub:'Remove every song from this list',onSelect:()=>push(confirmScreen('Clear Recently Played?','Removes all songs from this list. Favorites and playlists stay.',()=>{jset('recent',[]);toast('Recently Played cleared')}))}]:[]}))},
     queue.length>1&&{label:'Up Next',chev:1,art:MIXART,onSelect:()=>push(queueScreen())},
     {label:'Music Games',chev:1,art:MIXART,onSelect:()=>push(gamesMenu())},
     {label:'Extras',chev:1,art:MIXART,onSelect:()=>push(extrasMenu())},
@@ -1036,7 +1039,7 @@ function playlistsMenu(){
   return listScreen('Playlists',()=>{
     const p=getPls(); const names=['On-The-Go',...Object.keys(p).filter(n=>n!=='On-The-Go')];
     const smart=smartLists().map(sl=>({label:sl.name,sub:'Smart Playlist',chev:1,onSelect:()=>push(tracksScreen(sl.name,sl.tracks(),{empty:'Nothing here yet — play and rate some songs'}))}));
-    return [...smart,...names.map(n=>({label:n,sub:visibleTracks(p[n]||[]).length+' songs',chev:1,onSelect:()=>push(tracksScreen(n,p[n]||[],{empty:'Empty — hold the center button on a song to add it'}))}))];
+    return [...smart,...names.map(n=>({label:n,sub:visibleTracks(p[n]||[]).length+' songs',chev:1,onSelect:()=>push(tracksScreen(n,()=>getPls()[n]||[],{empty:'Empty — hold the center button on a song to add it',playlist:n}))}))];
   },{rowH:'two'});
 }
 
@@ -1048,6 +1051,7 @@ function discoverMenu(){
     {label:'Decade Mixes',chev:1,onSelect:()=>push(mixList('Decade Mixes',DECADES))},
     {label:'2000s Year by Year',chev:1,onSelect:()=>push(mixList('2000s Year by Year',YEAR_MIXES_00))},
     {label:'2010s Year by Year',chev:1,onSelect:()=>push(mixList('2010s Year by Year',YEAR_MIXES_10))},
+    {label:'2020s Year by Year',chev:1,onSelect:()=>push(mixList('2020s Year by Year',YEAR_MIXES_20))},
     {label:'Mood Mixes',chev:1,onSelect:()=>push(mixList('Mood Mixes',MOODS))},
     {label:'Mixes For You',chev:1,onSelect:()=>{
       const a=libArtists().filter(x=>x.id).slice(0,8);
@@ -1066,8 +1070,9 @@ function openMix(title,gen){
 }
 function tracksScreen(title,tracks,o){
   o=o||{};
-  return listScreen(title,()=>{
-    const vis=visibleTracks(tracks), items=[];
+  const s=listScreen(title,()=>{
+    const vis=visibleTracks(typeof tracks==='function'?tracks():tracks);
+    const items=[...(typeof o.head==='function'?o.head(vis):(o.head||[]))];
     if(vis.length>1){
       items.push({label:'Play All',onSelect:()=>{shuffleOn=false;playFrom(vis,0)}});
       items.push({label:'Shuffle',onSelect:()=>{shuffleOn=true;playFrom(vis,Math.floor(Math.random()*vis.length))}});
@@ -1076,15 +1081,18 @@ function tracksScreen(title,tracks,o){
       value:()=>sameT(t,nowT)?'♪':'',art:o.artUrl?null:()=>trackArt(t),artUrl:o.artUrl||null,onSelect:()=>playFrom(vis,i)}));
     return items;
   },{preview:true,rowH:'two',empty:o.empty});
+  if(o.playlist) s.playlist=o.playlist;
+  if(o.recent) s.recent=true;
+  return s;
 }
 function artistsList(list,title,o){
   return listScreen(title,list.map(a=>({label:a.name,value:()=>isHiddenArtist(a)?'Hidden':'',art:()=>artistPhoto(a),chev:1,onSelect:()=>a.id?openArtist(a):toast('No artist page for this entry')})),Object.assign({preview:true},o||{}));
 }
 function albumsLibList(){
-  return listScreen('Albums',libAlbums().map(a=>({label:a.title,sub:a.artist,art:()=>albumArt(a.id,a.artistId),chev:1,onSelect:()=>openAlbum({id:a.artistId,name:a.artist},{id:a.id,title:a.title,'primary-type':a.type})})),{preview:true,rowH:'two',empty:'No albums yet'});
+  return listScreen('Albums',()=>libAlbums().map(a=>({label:a.title,sub:a.artist,albumInfo:a,art:()=>albumArt(a.id,a.artistId),chev:1,onSelect:()=>openAlbum({id:a.artistId,name:a.artist},{id:a.id,title:a.title,'primary-type':a.type})})),{preview:true,rowH:'two',empty:'No albums yet'});
 }
-function coverFlow(albums){
-  return {type:'flow',title:'Cover Flow',sel:0,items:albums.map(a=>({label:a.title,sub:a.artist,art:()=>albumArt(a.id,a.artistId),onSelect:()=>openAlbum({id:a.artistId,name:a.artist},{id:a.id,title:a.title,'primary-type':a.type})}))};
+function coverFlow(){
+  return {type:'flow',title:'Cover Flow',sel:0,items:()=>libAlbums().map(a=>({label:a.title,sub:a.artist,albumInfo:a,art:()=>albumArt(a.id,a.artistId),onSelect:()=>openAlbum({id:a.artistId,name:a.artist},{id:a.id,title:a.title,'primary-type':a.type})}))};
 }
 function shuffleSongs(){
   const lib=libSongs(); if(!lib.length){surprise();return}
@@ -2254,12 +2262,13 @@ function storeAfterHide(){
 }
 function hiddenMenu(){
   return listScreen('Hidden Music',()=>{
-    const nA=Object.keys(jget('hz_hidden_artists',{})).length, nS=Object.keys(jget('hz_hidden_songs',{})).length;
+    const nA=Object.keys(jget('hz_hidden_artists',{})).length, nS=Object.keys(jget('hz_hidden_songs',{})).length, nAl=Object.keys(jget('hz_hidden_albums',{})).length;
     return [
       {label:'Hidden Artists',sub:nA+' hidden · select one to unhide',chev:1,onSelect:()=>push(hiddenList('Hidden Artists','hz_hidden_artists'))},
       {label:'Hidden Songs',sub:nS+' hidden · select one to unhide',chev:1,onSelect:()=>push(hiddenList('Hidden Songs','hz_hidden_songs'))},
+      {label:'Hidden Albums',sub:nAl+' hidden · select one to unhide',chev:1,onSelect:()=>push(hiddenList('Hidden Albums','hz_hidden_albums'))},
       {label:'Hide Featured Artists',sub:'Also hide songs that feature a hidden artist',value:()=>prefs.hideFeat===false?'Off':'On',onSelect:()=>{prefs.hideFeat=(prefs.hideFeat===false);savePrefs();render()}},
-      (nA||nS)&&{label:'Unhide Everything',sub:'Bring all hidden music back',onSelect:()=>{jset('hz_hidden_artists',{});jset('hz_hidden_songs',{});_hidA=null;_hidS=null;toast('Everything unhidden');render()}}
+      (nA||nS||nAl)&&{label:'Unhide Everything',sub:'Bring all hidden music back',onSelect:()=>{jset('hz_hidden_artists',{});jset('hz_hidden_songs',{});jset('hz_hidden_albums',{});_hidA=null;_hidS=null;toast('Everything unhidden');render()}}
     ];
   },{rowH:'two'});
 }
@@ -2292,7 +2301,14 @@ const YEAR_ARTISTS={
   2016:['Drake','Rae Sremmurd','Desiigner','Lil Uzi Vert','21 Savage','Migos','Travis Scott','A Boogie wit da Hoodie','Marshmello','Alan Walker','The Chainsmokers','Jonas Blue','Anne-Marie','Bishop Briggs','Liam Payne','Niall Horan','Julia Michaels'],
   2017:['Cardi B','Camila Cabello','Khalid','Lil Pump','XXXTentacion','Juice WRLD','Dua Lipa','Bazzi','Sabrina Carpenter','Harry Styles','Lauv','NF','French Montana','Offset','6ix9ine','Jax Jones','Portugal. The Man','Rita Ora'],
   2018:['Ariana Grande','Post Malone','Travis Scott','Billie Eilish','Lil Baby','Blueface','Roddy Ricch','Bad Bunny','J Balvin','Marshmello','Bebe Rexha','Ella Mai','Mabel','Ava Max','Lewis Capaldi','Dynoro','Kane Brown'],
-  2019:['Doja Cat','Lil Nas X','Lizzo','Lewis Capaldi','Tones and I','Megan Thee Stallion','Roddy Ricch','DaBaby','Lil Tecca','Polo G','Arizona Zervas','Blackbear','MEDUZA','Regard','Topic','Riton']
+  2019:['Doja Cat','Lil Nas X','Lizzo','Lewis Capaldi','Tones and I','Megan Thee Stallion','Roddy Ricch','DaBaby','Lil Tecca','Polo G','Arizona Zervas','Blackbear','MEDUZA','Regard','Topic','Riton'],
+  2020:['The Weeknd','Dua Lipa','Doja Cat','Megan Thee Stallion','Roddy Ricch','DaBaby','Lil Baby','Pop Smoke','Jack Harlow','Tones and I','Billie Eilish','Harry Styles','Lewis Capaldi','Arizona Zervas','24kGoldn','Iann Dior','Blackbear','Jawsh 685','BTS','Bad Bunny','Cardi B','Lizzo','Lil Nas X'],
+  2021:['Olivia Rodrigo','Lil Nas X','The Kid LAROI','24kGoldn','Giveon','Polo G','Moneybagg Yo','Lil Durk','Måneskin','Glass Animals','Doja Cat','Megan Thee Stallion','Saweetie','SZA','BTS','Silk Sonic','Central Cee','Rauw Alejandro','Adele','Ed Sheeran','Justin Bieber','Dua Lipa'],
+  2022:['Harry Styles','Bad Bunny','SZA','Steve Lacy','Jack Harlow','Latto','Gunna','Future','Metro Boomin','Ice Spice','PinkPantheress','Rema','Tems','Anitta','Tate McRae','Nicky Youre','JVKE','Lizzo','Sam Smith','Charlie Puth','Beyoncé','Taylor Swift','David Guetta'],
+  2023:['Tate McRae','Ice Spice','PinkPantheress','Tyla','Jung Kook','NewJeans','Fifty Fifty','Olivia Rodrigo','Miley Cyrus','Sabrina Carpenter','Doja Cat','Peso Pluma','Karol G','Bad Bunny','Morgan Wallen','Zach Bryan','Noah Kahan','Jelly Roll','RAYE','Coi Leray','Central Cee','Metro Boomin','Burna Boy','Tiësto','Kenya Grace'],
+  2024:['Sabrina Carpenter','Chappell Roan','Benson Boone','Teddy Swims','Shaboozey','Gracie Abrams','Tyla','Sexyy Red','GloRilla','Doechii','Tommy Richman','Dasha','Artemas','Djo','Alex Warren','Kendrick Lamar','Future','Metro Boomin','Billie Eilish','Dua Lipa','Hozier','FloyyMenor','Feid','Jimin','ROSÉ'],
+  2025:['Alex Warren','Benson Boone','Chappell Roan','Doechii','Shaboozey','Teddy Swims','Sabrina Carpenter','Lady Gaga','Bruno Mars','ROSÉ','Kendrick Lamar','SZA','Bad Bunny','Tate McRae','Gracie Abrams','Addison Rae','Sombr','KATSEYE','Myles Smith','MOLIY','Ravyn Lenae','Gigi Perez','Cynthia Erivo','HUNTR/X','Saja Boys'],
+  2026:['Olivia Dean','Alex Warren','Addison Rae','Sombr','Leon Thomas','Lola Young','KATSEYE','The Marías','Tate McRae','Sabrina Carpenter','Chappell Roan','Doechii','Tyla','Benson Boone','Billie Eilish','Bad Bunny','ROSÉ']
 };
 // Names the way MusicBrainz spells them, where it differs from the common spelling.
 const ARTIST_ALIAS={'Ke$ha':'Kesha','Pink':'P!nk'};
@@ -2300,6 +2316,7 @@ const norm2=s=>norm(s).replace(/^the\s+/,'').replace(/[^a-z0-9]+/g,'');   // tol
 const yearHue=y=>((y-2000)*37)%360;
 const YEAR_MIXES_00=Array.from({length:10},(_,i)=>2000+i).map(y=>({label:y+' Hits',from:y,to:y,years:[y],c:['hsl('+yearHue(y)+',75%,55%)','hsl('+(yearHue(y)+45)%360+',70%,28%)']}));
 const YEAR_MIXES_10=Array.from({length:10},(_,i)=>2010+i).map(y=>({label:y+' Hits',from:y,to:y,years:[y],c:['hsl('+yearHue(y)+',75%,55%)','hsl('+(yearHue(y)+45)%360+',70%,28%)']}));
+const YEAR_MIXES_20=Array.from({length:7},(_,i)=>2020+i).map(y=>({label:y+' Hits',from:y,to:y,years:[y],c:['hsl('+yearHue(y)+',75%,55%)','hsl('+(yearHue(y)+45)%360+',70%,28%)']}));
 const yrCache=new Map();
 const yearOf=r=>{
   const f=parseInt((r['first-release-date']||'').slice(0,4));
@@ -2411,7 +2428,7 @@ const MIX_KIND_BY_LABEL={'Pop Weekly':'pop','Hip-Hop Nation':'hiphop','EDM Bange
 const MIX_WORD={pop:'POP',hiphop:'HIP-HOP',edm:'EDM',rnb:'R&B',rock:'ROCK',country:'COUNTRY',latin:'LATIN',kpop:'K-POP',indie:'INDIE',jazz:'JAZZ',d80:'THE 80s',d90:'THE 90s',d00:'THE 2000s',d10:'THE 2010s',d20:'THE 2020s',chill:'CHILL',party:'PARTY',workout:'WORKOUT',night:'LATE NIGHT',top10:'TOP 10',dice:'SURPRISE'};
 function mixKind(m){
   if(MIX_KIND_BY_LABEL[m.label]) return MIX_KIND_BY_LABEL[m.label];
-  const y=/^(\d{4}) Hits$/.exec(m.label||''); if(y) return {kind:+y[1]<2010?'d00':'d10',year:y[1]};
+  const y=/^(\d{4}) Hits$/.exec(m.label||''); if(y) return {kind:+y[1]>=2020?'d20':(+y[1]<2010?'d00':'d10'),year:y[1]};
   return 'pop';
 }
 const _xml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -2465,6 +2482,38 @@ function mixCover(m){
 }
 // Store tiles load their collage when you land on them (so we don't fetch every playlist at once)
 const mixFocus=m=>it=>{mixCover(m).then(u=>{if(u&&u.length){it._u=u;const s=scr();if(s&&s.type==='store')refreshStore(s)}}).catch(()=>{})};
+
+/* ═════════ Remove things you don't want listed: Recently Played, playlists, Cover Flow albums ═════════ */
+const isHiddenAlbum=id=>!!id&&!!jget('hz_hidden_albums',{})[id];
+function hideAlbum(a){const m=jget('hz_hidden_albums',{});m[a.id]={title:a.title,artist:a.artist};jset('hz_hidden_albums',m);toast('Album hidden')}
+function unhideAlbum(a){const m=jget('hz_hidden_albums',{});delete m[a.id];jset('hz_hidden_albums',m);toast('Album unhidden')}
+function removeRecent(t){jset('recent',getRecent().filter(x=>!sameT(x,t)));toast('Removed from Recently Played')}
+function removeAlbumFromRecent(a){jset('recent',getRecent().filter(t=>!(a.id?t.albumId===a.id:(t.album===a.title&&t.artist===a.artist))));toast('Removed from Recently Played')}
+function removeFromPlaylist(name,t){const p=getPls();if(p[name]){p[name]=p[name].filter(x=>!sameT(x,t));jset('playlists',p);toast('Removed from "'+name+'"')}}
+function confirmScreen(title,msg,onYes){
+  return listScreen(title,[{label:'Yes, remove',sub:msg,onSelect:()=>{onYes();back()}},{label:'Cancel',onSelect:()=>back()}],{rowH:'two'});
+}
+// What album (if any) is the cursor on? Works in Cover Flow and in the Albums list.
+function ctxAlbum(){
+  const s=scr(); if(!s) return null;
+  const it=(s.type==='flow'||s.type==='list')?(s._items&&s._items[s.sel]):null;
+  return (it&&it.albumInfo)||null;
+}
+function albumCtxMenu(a){
+  const inRecent=getRecent().some(t=>a.id?t.albumId===a.id:(t.album===a.title&&t.artist===a.artist));
+  const art={id:a.artistId,name:a.artist};
+  const items=[
+    {label:'Open Album',chev:1,onSelect:()=>{closeCtx();openAlbum(art,{id:a.id,title:a.title,'primary-type':a.type})}},
+    {label:'Hide This Album',sub:'Take it out of Cover Flow and Albums',onSelect:()=>{
+      hideAlbum(a); closeCtx();
+      if(scr()&&scr().type==='flow'&&!libAlbums().length){back();toast('No albums left')}
+    }},
+    inRecent&&{label:'Remove from Recently Played',sub:'Forget this album\u2019s songs there',onSelect:()=>{removeAlbumFromRecent(a);closeCtx()}},
+    a.artistId&&{label:'Go to Artist',chev:1,onSelect:()=>{closeCtx();openArtist(art)}},
+    a.artist&&{label:(isHiddenArtist(art)?'Unhide ':'Hide ')+a.artist,sub:'Hide all of their music',onSelect:()=>{if(isHiddenArtist(art))unhideArtist(art);else hideArtist(art);closeCtx()}}
+  ];
+  const sc=listScreen(a.title,items,{rowH:'two'}); sc.ctx=true; push(sc);
+}
 
 /* ═════════ boot ═════════ */
 applyPrefs();
