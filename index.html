@@ -273,6 +273,9 @@ body{background:radial-gradient(1100px 700px at 50% 28%,#1d2433,#080a0e 72%);dis
 .collage{display:grid!important;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;background-image:none!important;overflow:hidden}
 .collage>i{display:block;background:#222 center/cover}
 .pv-img.empty::after{content:none}
+/* ───────── artist playlist covers ───────── */
+.tc.acover,.pv-img.acover{overflow:hidden;background-image:none!important}
+.acover>svg{display:block;width:100%;height:100%}
 #yt-shell{position:fixed;top:-3000px;left:-3000px;width:320px;height:180px;opacity:0;pointer-events:none;overflow:hidden;z-index:1}
 #yt-shell iframe{width:100%;height:100%;border:0;display:block}
 #hint{position:fixed;right:22px;bottom:18px;max-width:250px;color:#7e8798;font-size:12px;line-height:1.55}
@@ -730,7 +733,7 @@ function updateSel(){
   updatePreview();
 }
 function setPv(img,it){
-  img.classList.remove('empty','collage'); img.innerHTML=''; img.style.backgroundImage='';
+  img._ac=null; img.classList.remove('empty','collage','acover'); img.innerHTML=''; img.style.backgroundImage='';
   if(it&&it.bg){img.style.backgroundImage=it.bg}
   else if(it&&it.url){paintCover(img,it.url)}
   else{img.classList.add('empty');img.style.backgroundImage=brandBg()}
@@ -1047,6 +1050,7 @@ function discoverMenu(){
   return listScreen('Discover',[
     {label:'Surprise Me',bg:mixBg({label:'Surprise',c:['#7873f5','#ff6ec4']},'dice'),onSelect:surprise},
     {label:TOP10.label,bg:grad(TOP10),chev:1,onSelect:()=>openMix(TOP10.label,top10)},
+    {label:'Artist Playlists',chev:1,onSelect:()=>push(artistMixesList())},
     {label:'Genre Mixes',chev:1,onSelect:()=>push(mixList('Genre Mixes',GENRES))},
     {label:'Decade Mixes',chev:1,onSelect:()=>push(mixList('Decade Mixes',DECADES))},
     {label:'2000s Year by Year',chev:1,onSelect:()=>push(mixList('2000s Year by Year',YEAR_MIXES_00))},
@@ -1056,7 +1060,7 @@ function discoverMenu(){
     {label:'Mixes For You',chev:1,onSelect:()=>{
       const a=libArtists().filter(x=>x.id).slice(0,8);
       if(!a.length){toast('Play a few songs first');return}
-      const items=[];a.forEach(ar=>{items.push({label:'This Is '+ar.name,art:()=>artistPhoto(ar),chev:1,onSelect:()=>openMix('This Is '+ar.name,()=>artistMix(ar,'top'))});items.push({label:ar.name+' Deep Cuts',art:()=>artistPhoto(ar),chev:1,onSelect:()=>openMix(ar.name+' Deep Cuts',()=>artistMix(ar,'deep'))})});
+      const items=[];a.forEach(ar=>{items.push({label:'This Is '+ar.name,art:()=>Promise.resolve(artistCoverSpec(ar,'this')),chev:1,onSelect:()=>openMix('This Is '+ar.name,()=>artistMix(ar,'top'))});items.push({label:ar.name+' Deep Cuts',art:()=>Promise.resolve(artistCoverSpec(ar,'deep')),chev:1,onSelect:()=>openMix(ar.name+' Deep Cuts',()=>artistMix(ar,'deep'))})});
       push(listScreen('Mixes For You',items,{preview:true}));
     }}
   ],{preview:true});
@@ -1154,7 +1158,7 @@ async function doSearch(q){
       {label:'Songs',sub:tracks.length+' found',chev:1,onSelect:()=>push(tracksScreen('Songs',tracks))},
       {label:'Albums',sub:Math.min(albumsV.length,40)+' found',chev:1,onSelect:()=>push(albumsFromGroups(albumsV.slice(0,40)))}
     ];
-    if(artists.length&&!isHiddenArtist(artists[0])){const t=artists[0];items.push({label:'This Is '+t.name,sub:'Hitzstar Mix',art:()=>artistPhoto(t),chev:1,onSelect:()=>openMix('This Is '+t.name,()=>artistMix(t,'top'))})}
+    if(artists.length&&!isHiddenArtist(artists[0])){const t=artists[0];items.push({label:'This Is '+t.name,sub:'Hitzstar Mix',art:()=>Promise.resolve(artistCoverSpec(t,'this')),chev:1,onSelect:()=>openMix('This Is '+t.name,()=>artistMix(t,'top'))})}
     res=listScreen('Results',items,{rowH:'two'});
     if(!artists.length&&!tracks.length&&!albums.length) res=textScreen('Results','No results for "'+q+'".\n\nTry a different spelling.');
   }catch(e){console.warn(e);res=textScreen('Results','Search failed. Check your connection and try again.')}
@@ -2086,13 +2090,16 @@ function openStore(){
       {label:'Genres',sub:'10 mixes',bg:iconBg('genres','#ff6ec4','#7873f5'),onSelect:()=>push(mixList('Genres',GENRES))},
       {label:'Decades',sub:'80s – 2020s',bg:iconBg('decades','#f2994a','#f2c94c'),onSelect:()=>push(mixList('Decades',DECADES))},
       {label:'Moods',sub:'Chill to party',bg:iconBg('moods','#43cea2','#185a9d'),onSelect:()=>push(mixList('Moods',MOODS))},
+      {label:'This Is…',sub:'Artist playlists',bg:iconBg('artist','#ff6ec4','#7873f5'),onSelect:()=>push(artistMixesList())},
       {label:'My Library',sub:'Your music',bg:iconBg('library','#666','#111'),onSelect:()=>push(musicMenu())}]},
     {key:'new',kind:'shelf',title:'New & Noteworthy',items:[],loading:true},
     {key:'top',kind:'songs',title:'Top Songs',items:[],loading:true,_all:[]},
+    {key:'thisis',kind:'shelf',title:'This Is…',items:[],loading:true},
     {key:'pl',kind:'shelf',title:'Hot Playlists',items:[
       {label:TOP10.label,sub:'Hitzstar Mix',bg:grad(TOP10),onFocus:mixFocus(TOP10),onSelect:()=>openMix(TOP10.label,top10)},
       ...MOODS.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onFocus:mixFocus(m),onSelect:()=>openMix(m.label,()=>tagMix(m))})),
       ...DECADES.slice(0,3).map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onFocus:mixFocus(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))]},
+    {key:'deep',kind:'shelf',title:'Deep Cuts',items:[],loading:true},
     {key:'like',kind:'shelf',title:'You Might Like',round:true,items:[],loading:true},
     {key:'genres',kind:'shelf',title:'Genres',items:GENRES.map(m=>({label:m.label,sub:'Hitzstar Mix',bg:grad(m),onFocus:mixFocus(m),onSelect:()=>openMix(m.label,()=>tagMix(m))}))}
   ]};
@@ -2112,6 +2119,7 @@ async function storeFill(s){
     s.blocks.splice(s.blocks.findIndex(b=>b.key==='genres'),0,{key:'lib',kind:'shelf',round:true,title:'From Your Library',items:lib.slice(0,8).map(a=>({label:a.name,art:()=>artistPhoto(a),onSelect:()=>openArtist(a)}))});
     upd();
   }
+  lib.slice(0,6).forEach(a=>{blk('thisis').items.push(artistPlTile(a,'this'));blk('deep').items.push(artistPlTile(a,'deep'))}); upd();
   const srcs=[...shuffleArr(STORE_KNOWN),...shuffleArr(STORE_NAMES).slice(0,9).map(n=>({name:n}))];
   for(const src of srcs){
     if(!alive()) return;
@@ -2125,6 +2133,7 @@ async function storeFill(s){
         nb.items.sort((x,y)=>(y._d||'').localeCompare(x._d||''));
       }
       lb.items.push({label:a.name,art:()=>artistPhoto(a),onSelect:()=>openArtist(a)});
+      if(!blk('thisis').items.some(x=>x.label==='This Is '+a.name)){blk('thisis').items.push(artistPlTile(a,'this'));blk('deep').items.push(artistPlTile(a,'deep'))}
       (info.tops||[]).filter(t=>!isHiddenTrack(t)).slice(0,2).forEach(t=>tb._all.push(t));
       tb._all.sort((x,y)=>(y._pop||0)-(x._pop||0));
       const top8=tb._all.slice(0,8);
@@ -2134,7 +2143,7 @@ async function storeFill(s){
     }catch(e){console.warn(e)}
     await sleep(150);
   }
-  ['new','top','like'].forEach(k=>{blk(k).loading=false}); upd();
+  ['new','top','like','thisis','deep'].forEach(k=>{blk(k).loading=false}); upd();
 }
 
 /* —— Store artist page —— */
@@ -2143,9 +2152,8 @@ function openArtist(a){
     {key:'hero',kind:'banner',title:a.name,sub:'Artist'},
     {key:'act',kind:'actions',items:[{label:'▶ Play',onSelect:()=>playTop(a)},{label:'⤮ Shuffle',onSelect:()=>playTop(a,true)}]},
     {key:'songs',kind:'songs',title:'Top Songs',items:[],loading:true},
+    {key:'apl',kind:'shelf',title:'Artist Playlists',items:[artistPlTile(a,'this'),artistPlTile(a,'deep')]},
     {key:'more',kind:'rows',title:'More',items:[
-      {label:'This Is '+a.name,sub:'Hitzstar Mix',chev:1,onSelect:()=>openMix('This Is '+a.name,()=>artistMix(a,'top'))},
-      {label:a.name+' Deep Cuts',sub:'Hitzstar Mix · lesser-known tracks',chev:1,onSelect:()=>openMix(a.name+' Deep Cuts',()=>artistMix(a,'deep'))},
       {label:'Fan Games',sub:'Quizzes about '+a.name+' · Superfan rank',chev:1,onSelect:()=>push(artistGamesMenu(a))},
       {label:isHiddenArtist(a)?'Unhide Artist':'Hide Artist',sub:isHiddenArtist(a)?'Show '+a.name+' again':'Stop showing '+a.name+' anywhere',hideRow:true,onSelect:()=>{
         const st=scr(); if(isHiddenArtist(a)) unhideArtist(a); else {hideArtist(a);afterHide()}
@@ -2422,6 +2430,7 @@ const ICON_MOTIF={
   genres:()=>'<path d="M82 54L152 40V120" fill="none" stroke="#fff" stroke-width="10" stroke-linejoin="round"/><path d="M82 54V132" stroke="#fff" stroke-width="10"/><ellipse cx="66" cy="136" rx="22" ry="16" fill="#fff"/><ellipse cx="136" cy="122" rx="22" ry="16" fill="#fff"/>',
   decades:()=>'<circle cx="100" cy="92" r="54" fill="none" stroke="#fff" stroke-width="10"/><path d="M100 56V94L126 108" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>',
   moods:()=>'<circle cx="100" cy="92" r="54" fill="#fff"/><circle cx="80" cy="80" r="7" fill="url(#g)"/><circle cx="120" cy="80" r="7" fill="url(#g)"/><path d="M72 104Q100 134 128 104" fill="none" stroke="#c0407a" stroke-width="9" stroke-linecap="round"/>',
+  artist:()=>'<rect x="80" y="34" width="40" height="72" rx="20" fill="#fff"/><path d="M62 90Q62 132 100 132T138 90" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M100 132V158M76 162H124" stroke="#fff" stroke-width="9" stroke-linecap="round"/>',
   library:()=>'<rect x="46" y="50" width="30" height="96" rx="5" fill="#fff"/><rect x="82" y="64" width="30" height="82" rx="5" fill="#fff" fill-opacity=".85"/><rect x="118" y="44" width="30" height="102" rx="5" fill="#fff" fill-opacity=".7" transform="rotate(8 133 95)"/><path d="M40 152H160" stroke="#fff" stroke-width="7" stroke-linecap="round"/>'
 };
 const MIX_KIND_BY_LABEL={'Pop Weekly':'pop','Hip-Hop Nation':'hiphop','EDM Bangers':'edm','R&B Soul':'rnb','Rock Essentials':'rock','Country Roads':'country','Latin Heat':'latin','K-Pop Rising':'kpop','Indie Waves':'indie','Jazz Lounge':'jazz','80s Throwback':'d80','90s Flashback':'d90','2000s Hits':'d00','2010s Replay':'d10','2020s Now':'d20','Chill Vibes':'chill','Party Starters':'party','Workout Energy':'workout','Late Night Feels':'night','Hitzstar Top 10':'top10'};
@@ -2453,7 +2462,8 @@ const brandBg=()=>{if(!_bgMemo.has('brand'))_bgMemo.set('brand',svgUrl(brandSvg(
 
 /* ═════════ Real covers for playlists: a 2×2 collage of the mix's own album art (cached after the first time) ═════════ */
 function paintCover(el,u){
-  el.classList.remove('collage'); el.innerHTML='';
+  if(u&&u.acover){paintArtistCover(el,u);return}
+  el._ac=null; el.classList.remove('collage','acover'); el.innerHTML='';
   if(Array.isArray(u)){
     if(u.length>=4){
       el.classList.add('collage'); el.style.backgroundImage='none';
@@ -2513,6 +2523,83 @@ function albumCtxMenu(a){
     a.artist&&{label:(isHiddenArtist(art)?'Unhide ':'Hide ')+a.artist,sub:'Hide all of their music',onSelect:()=>{if(isHiddenArtist(art))unhideArtist(art);else hideArtist(art);closeCtx()}}
   ];
   const sc=listScreen(a.title,items,{rowH:'two'}); sc.ctx=true; push(sc);
+}
+
+/* ═════════ Artist playlist covers: the artist's photo in a duotone, with "THIS IS" + their name on it ═════════ */
+function hslRgb(h,s,l){h=((h%360)+360)%360;s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return [f(0),f(8),f(4)].map(x=>Math.round(x*255))}
+function artistHue(name){let h=7;const s=String(name||'');for(let i=0;i<s.length;i++)h=(h*33+s.charCodeAt(i))%360;return h}
+const _ax=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+let _acUid=0;
+// Pure function: returns the SVG markup for a cover. `spec.photo` may be null (then a monogram is shown until the photo loads).
+function artistCoverSvg(spec,uid){
+  uid=uid||('c'+(++_acUid));
+  const name=String(spec.name||''), deep=spec.variant==='deep', h=artistHue(name);
+  const dark=deep?hslRgb(h,35,5):hslRgb(h,72,11), light=deep?hslRgb(h,40,50):hslRgb(h+18,92,67), mid=hslRgb(h+10,70,32);
+  const tv=i=>(dark[i]/255).toFixed(3)+' '+(light[i]/255).toFixed(3);
+  const up=name.toUpperCase(), words=up.split(/\s+/);
+  let lines=[up];
+  if(up.length>10&&words.length>1){                       // wrap long names onto two lines, split near the middle
+    let best=1,bd=1e9;for(let i=1;i<words.length;i++){const a=words.slice(0,i).join(' ').length,b=words.slice(i).join(' ').length,d=Math.abs(a-b);if(d<bd){bd=d;best=i}}
+    lines=[words.slice(0,best).join(' '),words.slice(best).join(' ')];
+  }
+  const L=Math.max(...lines.map(x=>x.length)), fs=Math.max(15,Math.min(42,Math.floor(168/(L*.76))));
+  const base=190-(lines.length-1)*(fs*.98);
+  const nameSvg=lines.map((t,i)=>'<text x="12" y="'+_f(base+i*fs*.98)+'" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="'+fs+'" fill="#fff" letter-spacing="-.5">'+_ax(t)+'</text>').join('');
+  const tag=deep?'DEEP CUTS':'THIS IS';
+  const photo=spec.photo
+    ?'<image href="'+_ax(spec.photo)+'" x="0" y="0" width="200" height="200" preserveAspectRatio="xMidYMid slice" filter="url(#'+uid+'f)"/>'
+    :'<text x="100" y="128" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="120" fill="#fff" fill-opacity=".16">'+_ax(up.charAt(0))+'</text>';
+  const rings=deep?[34,52,70,88].map(r=>'<circle cx="168" cy="172" r="'+r+'" fill="none" stroke="#fff" stroke-opacity=".13" stroke-width="1.5"/>').join('')+'<circle cx="168" cy="172" r="9" fill="#fff" fill-opacity=".18"/>':'';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice"><defs>'+
+    '<linearGradient id="'+uid+'g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="rgb('+mid+')"/><stop offset="1" stop-color="rgb('+dark+')"/></linearGradient>'+
+    '<filter id="'+uid+'f" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 1 0"/>'+
+    '<feComponentTransfer><feFuncR type="linear" slope="1.25" intercept="-.09"/><feFuncG type="linear" slope="1.25" intercept="-.09"/><feFuncB type="linear" slope="1.25" intercept="-.09"/></feComponentTransfer>'+
+    '<feComponentTransfer><feFuncR type="table" tableValues="'+tv(0)+'"/><feFuncG type="table" tableValues="'+tv(1)+'"/><feFuncB type="table" tableValues="'+tv(2)+'"/></feComponentTransfer></filter>'+
+    '<linearGradient id="'+uid+'s" x1="0" y1="0" x2="0" y2="1"><stop offset=".38" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".72"/></linearGradient>'+
+    '<linearGradient id="'+uid+'w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>'+
+    '<rect width="200" height="200" fill="url(#'+uid+'g)"/>'+photo+rings+
+    '<rect width="200" height="200" fill="url(#'+uid+'s)"/><rect width="200" height="200" fill="url(#'+uid+'w)"/>'+
+    '<text x="12" y="27" font-family="Helvetica,Arial,sans-serif" font-weight="900" font-size="14" letter-spacing="3.4" fill="#fff">'+tag+'</text>'+
+    '<rect x="12" y="33" width="'+(deep?34:26)+'" height="3.2" rx="1.6" fill="rgb('+light+')"/>'+
+    '<text x="188" y="21" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-weight="800" font-size="7" letter-spacing="1.8" fill="#fff" fill-opacity=".85">HITZSTAR</text>'+
+    nameSvg+'</svg>';
+}
+const acMemo=new Map();
+// A cover "spec" paints immediately (text + color), then the photo fades in when it has loaded.
+function artistCoverSpec(a,variant){
+  const k=(a.id||a.name)+'|'+variant; if(acMemo.has(k)) return acMemo.get(k);
+  const spec={acover:true,name:a.name,variant,photo:null,done:false};
+  spec.photoP=(async()=>{
+    let u=null; try{const b=await storeBrand(a);u=b.photo||b.banner||null}catch{}
+    if(!u){try{u=await artistPhoto(a)}catch{}}
+    if(u&&!(await imgOk(u,4000))) u=null;
+    spec.photo=u; spec.done=true; return u;
+  })();
+  acMemo.set(k,spec); return spec;
+}
+function paintArtistCover(el,spec){
+  el.classList.remove('collage'); el.classList.add('acover'); el.style.backgroundImage='none';
+  el._ac=spec; el.innerHTML=artistCoverSvg(spec);
+  if(!spec.done) spec.photoP.then(()=>{if(el._ac===spec&&el.isConnected){el.innerHTML=artistCoverSvg(spec)}}).catch(()=>{});
+}
+const artistPlTile=(a,variant)=>{
+  const deep=variant==='deep', label=deep?a.name+' Deep Cuts':'This Is '+a.name;
+  return {label,sub:'Hitzstar Playlist',art:()=>Promise.resolve(artistCoverSpec(a,variant)),onSelect:()=>openMix(label,()=>artistMix(a,deep?'deep':'top'))};
+};
+// Every artist we know about (your library, the featured artists, and ones the Store has already looked up) as playlists
+function artistMixesList(){
+  return listScreen('Artist Playlists',()=>{
+    const lib=libArtists().filter(a=>a.id);
+    const cached=Object.entries(jget('ipod_store_ids',{})).map(([name,id])=>({name,id}));
+    const arts=dedupeBy([...lib,...STORE_KNOWN,...cached],a=>a.id).filter(a=>!isHiddenArtist(a)).slice(0,30);
+    const out=[];
+    arts.forEach(a=>{
+      const fromLib=lib.some(l=>l.id===a.id);
+      out.push(Object.assign(artistPlTile(a,'this'),{sub:fromLib?'From your library':'Hitzstar Playlist',chev:1}));
+      out.push(Object.assign(artistPlTile(a,'deep'),{sub:'Lesser-known tracks',chev:1}));
+    });
+    return out;
+  },{rowH:'two',preview:true,empty:'Play or favorite some music to see artist playlists'});
 }
 
 /* ═════════ boot ═════════ */
